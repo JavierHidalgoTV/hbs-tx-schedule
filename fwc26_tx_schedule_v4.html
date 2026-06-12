@@ -235,10 +235,10 @@ body.light-mode .md1-group-header:hover{background:rgba(0,0,0,.04);}
     <div class="xl-title">FWC26 — TX Schedule</div>
     <div class="xl-sub">Load the schedule data file to begin. Drag &amp; drop or click to browse.</div>
     <div class="xl-drop" id="xl-drop-main">
-      <input type="file" id="xl-file-main" accept=".xlsx,.xls" onchange="handleXlFile(this)">
+      <input type="file" id="xl-file-main" accept=".xlsx,.xls,.csv,.tsv,.txt" onchange="handleXlFile(this)">
       <div class="xl-drop-label">
-        <strong>FWC26_TX_Input_v3.xlsx <span class="xl-status" id="xl-file-status"></span></strong>
-        Services · Feeds · Matches · Settings
+        <strong>Match schedule file <span class="xl-status" id="xl-file-status"></span></strong>
+        Accepts: source schedule Excel/CSV or full TX Input (.xlsx)
       </div>
     </div>
     <button class="xl-btn" id="xl-load-btn" disabled onclick="applyLoadedData()">Load Schedule</button>
@@ -278,8 +278,9 @@ body.light-mode .md1-group-header:hover{background:rgba(0,0,0,.04);}
       <div style="width:1px;height:14px;background:var(--border2);margin:0 2px;"></div>
       <!-- Zoom -->
       <span style="font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Zoom</span>
-      <button class="zoom-btn active" id="zoom-1h"  onclick="setZoom('1h',this)">1h</button>
-      <button class="zoom-btn"        id="zoom-all" onclick="setZoom('all',this)">All</button>
+      <button class="zoom-btn"        id="zoom-1h"  onclick="setZoom('1h',this)">1h</button>
+      <button class="zoom-btn"        id="zoom-3h"  onclick="setZoom('3h',this)">3h</button>
+      <button class="zoom-btn active" id="zoom-all" onclick="setZoom('all',this)">All</button>
       <div style="width:1px;height:14px;background:var(--border2);margin:0 2px;"></div>
       <!-- Collapse all -->
       <button id="collapse-all-btn" onclick="collapseAll()">⊟ Collapse all</button>
@@ -304,15 +305,16 @@ body.light-mode .md1-group-header:hover{background:rgba(0,0,0,.04);}
 const GLOBAL_START_H=10, GLOBAL_END_H=24;
 
 // Max feed offsets across all services
-const MAX_EARLY_MIN=150; // earliest feed starts 150min before KO
-const MAX_LATE_MIN=65;   // latest feed ends 65min after KO
+const MAX_EARLY_MIN=150; // earliest feed TX Start (min before KO)
+const MAX_LATE_MIN=65;   // latest feed TX End (min after FW); FW = KO + match.dur
+const POST_FW_DISPLAY_MIN=15; // visual buffer after FW for the match block (est. zone)
 
 function calcDayBounds(dayMatches, md1Matches){
   let minH=99, maxH=0;
   const allM=[...dayMatches,...md1Matches];
   allM.forEach(m=>{
     const earliest=m.koIBC - MAX_EARLY_MIN/60;
-    const latest  =m.koIBC + m.dur/60 + MAX_LATE_MIN/60;
+    const latest  =m.koIBC + (m.dur + Math.max(MAX_LATE_MIN, POST_FW_DISPLAY_MIN))/60 + 0.25;
     if(earliest<minH) minH=earliest;
     if(latest>maxH)   maxH=latest;
   });
@@ -356,8 +358,12 @@ const CH_COLORS={
   'Match B':{ full:'#0f3d2c', svc:'#0a2a1e', feed:'#071a12', svcDim:'#0f3d2c99', feedDim:'#0f3d2c77', text:'#5dd4a0', pip:'#5dd4a0', ko:'rgba(93,212,160,0.45)' },
   'Match C':{ full:'#2e1f4a', svc:'#1e1432', feed:'#140d22', svcDim:'#2e1f4a99', feedDim:'#2e1f4a77', text:'#b89cff', pip:'#b89cff', ko:'rgba(184,156,255,0.45)' },
   'Match D':{ full:'#3d1f10', svc:'#2a1408', feed:'#1a0d04', svcDim:'#3d1f1099', feedDim:'#3d1f1077', text:'#ff9e6a', pip:'#ff9e6a', ko:'rgba(255,158,106,0.45)' },
+  'Match E':{ full:'#1a3d38', svc:'#122a26', feed:'#0d1a18', svcDim:'#1a3d3899', feedDim:'#1a3d3877', text:'#5de0cf', pip:'#5de0cf', ko:'rgba(93,224,207,0.45)' },
+  'Match F':{ full:'#3d1a2e', svc:'#2a1020', feed:'#1a0814', svcDim:'#3d1a2e99', feedDim:'#3d1a2e77', text:'#ff7abf', pip:'#ff7abf', ko:'rgba(255,122,191,0.45)' },
 };
 
+// Feed/service stops = minutes after Final Whistle (FW = KO + match.dur).
+// Feed/service starts = minutes before/after KO (negative = before KO).
 const DEMO_SERVICES=[
   { id:'dcl',   name:'Digital Content Live',             start:-150, stop:65,
     feeds:[
@@ -396,7 +402,7 @@ const DEMO_SERVICES=[
     feeds:[
       {name:'Datatainment',  start:-90,  stop:15, subtasks:[]},
     ]},
-  { id:'mb',    name:'Match Buddy',                      start:-90,  stop:15,
+  { id:'mb',    name:'Match Buddy',                      start:-150, stop:65,
     feeds:[
       {name:'MP UNI',             start:-60,  stop:15, subtasks:[]},
       {name:'WF',                 start:-90,  stop:15, subtasks:[]},
@@ -426,41 +432,127 @@ const DEMO_SERVICES=[
 
 const DEMO_MATCHES=[
   // MD1 — 11 Jun
-  {m:1, md:1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match A',teamA:'MEX',teamB:'RSA',fullA:'Mexico',fullB:'South Africa',koIBC:14,city:'Mexico City',localKO:'13:00',utcKO:'19:00',tz:'UTC-6',dur:105,trainA:'12:00 IBC',pcA:'15:30 IBC',trainB:'18:00 IBC',pcB:'16:30 IBC'},
-  {m:2, md:1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match B',teamA:'KOR',teamB:'CZE',fullA:'Korea Republic',fullB:'Czechia',koIBC:21,city:'Guadalajara',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'17:30 IBC',pcA:'15:30 IBC',trainB:'18:45 IBC',pcB:'16:30 IBC'},
+  {m:  1,md: 1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match A',teamA:'MEX',teamB:'RSA',fullA:'Mexico',fullB:'South Africa',koIBC:14,city:'Mexico City',dur:105,trainA:'12:00 IBC',pcA:'15:30 IBC',trainB:'18:00 IBC',pcB:'16:30 IBC'},
+  {m:  2,md: 1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match B',teamA:'KOR',teamB:'CZE',fullA:'Korea Republic',fullB:'Czechia',koIBC:21,city:'Guadalajara',dur:105,trainA:'17:30 IBC',pcA:'15:30 IBC',trainB:'18:45 IBC',pcB:'16:30 IBC'},
   // MD2 — 12 Jun
-  {m:3, md:2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match A',teamA:'CAN',teamB:'BIH',fullA:'Canada',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Toronto',localKO:'15:00',utcKO:'19:00',tz:'UTC-4',dur:105,trainA:'14:00 IBC',pcA:'18:45 IBC',trainB:'10:00 IBC',pcB:'17:45 IBC'},
-  {m:4, md:2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match B',teamA:'USA',teamB:'PAR',fullA:'United States',fullB:'Paraguay',koIBC:20,city:'Los Angeles',localKO:'18:00',utcKO:'01:00+1',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'17:45 IBC',trainB:'11:00 IBC',pcB:'20:45 IBC'},
+  {m:  3,md: 2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match A',teamA:'CAN',teamB:'BIH',fullA:'Canada',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Toronto',dur:105,trainA:'14:00 IBC',pcA:'17:00 IBC',trainB:'10:00 IBC',pcB:'17:45 IBC'},
+  {m:  4,md: 2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match B',teamA:'USA',teamB:'PAR',fullA:'United States',fullB:'Paraguay',koIBC:20,city:'Los Angeles, CA',dur:105,trainA:'13:00 IBC',pcA:'17:00 IBC',trainB:'11:00 IBC',pcB:'20:45 IBC'},
   // MD3 — 13 Jun
-  {m:5, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match C',teamA:'HAI',teamB:'SCO',fullA:'Haiti',fullB:'Scotland',koIBC:20,city:'Boston, MA',localKO:'21:00',utcKO:'01:00+1',tz:'UTC-4',dur:105,trainA:'17:00 IBC',pcA:'16:00 IBC',trainB:'09:00 IBC',pcB:'10:30 IBC'},
-  {m:6, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match D',teamA:'AUS',teamB:'TUR',fullA:'Australia',fullB:'Türkiye',koIBC:23,city:'Vancouver',localKO:'21:00',utcKO:'04:00+1',tz:'UTC-7',dur:105,trainA:'21:00 IBC',pcA:'19:45 IBC',trainB:'17:00 IBC',pcB:'20:30 IBC'},
-  {m:7, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match B',teamA:'BRA',teamB:'MAR',fullA:'Brazil',fullB:'Morocco',koIBC:17,city:'New York, NJ',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'17:00 IBC',pcB:'14:30 IBC'},
-  {m:8, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match A',teamA:'QAT',teamB:'SUI',fullA:'Qatar',fullB:'Switzerland',koIBC:14,city:'San Francisco, CA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'12:00 IBC',pcA:'17:45 IBC',trainB:'12:15 IBC',pcB:'20:45 IBC'},
+  {m:  5,md: 3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match C',teamA:'HAI',teamB:'SCO',fullA:'Haiti',fullB:'Scotland',koIBC:20,city:'Boston, MA',dur:105,trainA:'17:00 IBC',pcA:'16:00 IBC',trainB:'09:00 IBC',pcB:'11:15 IBC'},
+  {m:  6,md: 3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match D',teamA:'AUS',teamB:'TUR',fullA:'Australia',fullB:'Türkiye',koIBC:23,city:'Vancouver',dur:105,trainA:'21:00 IBC',pcA:'19:30 IBC',trainB:'17:00 IBC',pcB:'20:30 IBC'},
+  {m:  7,md: 3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match B',teamA:'BRA',teamB:'MAR',fullA:'Brazil',fullB:'Morocco',koIBC:17,city:'New York, NJ',dur:105,trainA:'10:00 IBC',pcA:'15:15 IBC',trainB:'17:00 IBC',pcB:'14:30 IBC'},
+  {m:  8,md: 3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match A',teamA:'QAT',teamB:'SUI',fullA:'Qatar',fullB:'Switzerland',koIBC:14,city:'San Francisco, CA',dur:105,trainA:'12:00 IBC',pcA:'17:45 IBC',trainB:'12:15 IBC',pcB:'20:45 IBC'},
   // MD4 — 14 Jun
-  {m:9, md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match C',teamA:'CIV',teamB:'ECU',fullA:"Côte d'Ivoire",fullB:'Ecuador',koIBC:18,city:'Philadelphia, PA',localKO:'19:00',utcKO:'23:00',tz:'UTC-4',dur:105,trainA:'16:00 IBC',pcA:'14:45 IBC',trainB:'08:00 IBC',pcB:'17:45 IBC'},
-  {m:10,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match A',teamA:'GER',teamB:'CUW',fullA:'Germany',fullB:'Curaçao',koIBC:12,city:'Houston, TX',localKO:'12:00',utcKO:'17:00',tz:'UTC-5',dur:105,trainA:'10:00 IBC',pcA:'18:45 IBC',trainB:'09:00 IBC',pcB:'19:45 IBC'},
-  {m:11,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match B',teamA:'NED',teamB:'JPN',fullA:'Netherlands',fullB:'Japan',koIBC:15,city:'Dallas, TX',localKO:'15:00',utcKO:'20:00',tz:'UTC-5',dur:105,trainA:'10:30 IBC',pcA:'18:45 IBC',trainB:'10:00 IBC',pcB:'15:45 IBC'},
-  {m:12,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match D',teamA:'SWE',teamB:'TUN',fullA:'Sweden',fullB:'Tunisia',koIBC:21,city:'Monterrey',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'21:00 IBC',pcB:'16:45 IBC'},
+  {m:  9,md: 4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match C',teamA:'CIV',teamB:'ECU',fullA:"Côte d'Ivoire",fullB:'Ecuador',koIBC:18,city:'Philadelphia, PA',dur:105,trainA:'16:00 IBC',pcA:'14:45 IBC',trainB:'08:00 IBC',pcB:'17:45 IBC'},
+  {m: 10,md: 4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match A',teamA:'GER',teamB:'CUW',fullA:'Germany',fullB:'Curaçao',koIBC:12,city:'Houston, TX',dur:105,trainA:'10:00 IBC',pcA:'18:45 IBC',trainB:'09:00 IBC',pcB:'19:45 IBC'},
+  {m: 11,md: 4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match B',teamA:'NED',teamB:'JPN',fullA:'Netherlands',fullB:'Japan',koIBC:15,city:'Dallas, TX',dur:105,trainA:'10:30 IBC',pcA:'18:45 IBC',trainB:'10:00 IBC',pcB:'15:45 IBC'},
+  {m: 12,md: 4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match D',teamA:'SWE',teamB:'TUN',fullA:'Sweden',fullB:'Tunisia',koIBC:21,city:'Monterrey',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'21:00 IBC',pcB:'16:45 IBC'},
   // MD5 — 15 Jun
-  {m:13,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match C',teamA:'KSA',teamB:'URU',fullA:'Saudi Arabia',fullB:'Uruguay',koIBC:17,city:'Miami, FL',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'17:00 IBC',pcA:'14:45 IBC',trainB:'09:00 IBC',pcB:'17:45 IBC'},
-  {m:14,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match A',teamA:'ESP',teamB:'CPV',fullA:'Spain',fullB:'Cabo Verde',koIBC:11,city:'Atlanta, GA',localKO:'12:00',utcKO:'16:00',tz:'UTC-4',dur:105,trainA:'09:30 IBC',pcA:'14:45 IBC',trainB:'13:00 IBC',pcB:'17:45 IBC'},
-  {m:15,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match D',teamA:'IRN',teamB:'NZL',fullA:'IR Iran',fullB:'New Zealand',koIBC:20,city:'Los Angeles, CA',localKO:'18:00',utcKO:'01:00+1',tz:'UTC-7',dur:105,trainA:'19:30 IBC',pcA:'17:45 IBC',trainB:'12:45 IBC',pcB:'20:45 IBC'},
-  {m:16,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match B',teamA:'BEL',teamB:'EGY',fullA:'Belgium',fullB:'Egypt',koIBC:14,city:'Seattle, WA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'16:30 IBC',trainB:'12:00 IBC',pcB:'17:30 IBC'},
+  {m: 13,md: 5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match C',teamA:'KSA',teamB:'URU',fullA:'Saudi Arabia',fullB:'Uruguay',koIBC:17,city:'Miami, FL',dur:105,trainA:'17:00 IBC',pcA:'14:45 IBC',trainB:'09:00 IBC',pcB:'17:45 IBC'},
+  {m: 14,md: 5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match A',teamA:'ESP',teamB:'CPV',fullA:'Spain',fullB:'Cabo Verde',koIBC:11,city:'Atlanta, GA',dur:105,trainA:'09:30 IBC',pcA:'14:45 IBC',trainB:'13:00 IBC',pcB:'17:45 IBC'},
+  {m: 15,md: 5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match D',teamA:'IRN',teamB:'NZL',fullA:'IR Iran',fullB:'New Zealand',koIBC:20,city:'Los Angeles, CA',dur:105,trainA:'19:30 IBC',pcA:'17:45 IBC',trainB:'12:45 IBC',pcB:'20:45 IBC'},
+  {m: 16,md: 5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match B',teamA:'BEL',teamB:'EGY',fullA:'Belgium',fullB:'Egypt',koIBC:14,city:'Seattle, WA',dur:105,trainA:'13:00 IBC',pcA:'16:30 IBC',trainB:'12:00 IBC',pcB:'17:30 IBC'},
   // MD6 — 16 Jun
-  {m:17,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match A',teamA:'FRA',teamB:'SEN',fullA:'France',fullB:'Senegal',koIBC:14,city:'New York, NJ',localKO:'15:00',utcKO:'19:00',tz:'UTC-4',dur:105,trainA:'15:00 IBC',pcA:'09:30 IBC',trainB:'16:00 IBC',pcB:'13:30 IBC'},
-  {m:18,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match B',teamA:'IRQ',teamB:'NOR',fullA:'Iraq',fullB:'Norway',koIBC:17,city:'Boston, MA',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'17:30 IBC',pcA:'19:00 IBC',trainB:'14:30 IBC',pcB:'16:00 IBC'},
-  {m:19,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match C',teamA:'ARG',teamB:'ALG',fullA:'Argentina',fullB:'Algeria',koIBC:20,city:'Kansas City, MO',localKO:'20:00',utcKO:'01:00+1',tz:'UTC-5',dur:105,trainA:'18:00 IBC',pcA:'14:30 IBC',trainB:'20:00 IBC',pcB:'15:30 IBC'},
-  {m:20,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match D',teamA:'AUT',teamB:'JOR',fullA:'Austria',fullB:'Jordan',koIBC:23,city:'San Francisco, CA',localKO:'21:00',utcKO:'04:00+1',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'20:45 IBC',trainB:'22:00 IBC',pcB:'17:45 IBC'},
+  {m: 17,md: 6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match A',teamA:'FRA',teamB:'SEN',fullA:'France',fullB:'Senegal',koIBC:14,city:'New York, NJ',dur:105,trainA:'15:00 IBC',pcA:'09:30 IBC',trainB:'16:00 IBC',pcB:'13:30 IBC'},
+  {m: 18,md: 6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match B',teamA:'IRQ',teamB:'NOR',fullA:'Iraq',fullB:'Norway',koIBC:17,city:'Boston, MA',dur:105,trainA:'17:30 IBC',pcA:'19:00 IBC',trainB:'14:30 IBC',pcB:'16:00 IBC'},
+  {m: 19,md: 6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match C',teamA:'ARG',teamB:'ALG',fullA:'Argentina',fullB:'Algeria',koIBC:20,city:'Kansas City, MO',dur:105,trainA:'18:00 IBC',pcA:'14:30 IBC',trainB:'20:00 IBC',pcB:'15:30 IBC'},
+  {m: 20,md: 6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match D',teamA:'AUT',teamB:'JOR',fullA:'Austria',fullB:'Jordan',koIBC:23,city:'San Francisco, CA',dur:105,trainA:'13:00 IBC',pcA:'20:45 IBC',trainB:'22:00 IBC',pcB:'17:45 IBC'},
   // MD7 — 17 Jun
-  {m:21,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match C',teamA:'GHA',teamB:'PAN',fullA:'Ghana',fullB:'Panama',koIBC:18,city:'Toronto',localKO:'19:00',utcKO:'23:00',tz:'UTC-4',dur:105,trainA:'18:00 IBC',pcA:'13:30 IBC',trainB:'08:00 IBC',pcB:'14:30 IBC'},
-  {m:22,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match B',teamA:'ENG',teamB:'CRO',fullA:'England',fullB:'Croatia',koIBC:15,city:'Dallas, TX',localKO:'15:00',utcKO:'20:00',tz:'UTC-5',dur:105,trainA:'11:00 IBC',pcA:'18:45 IBC',trainB:'15:00 IBC',pcB:'19:45 IBC'},
-  {m:23,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match A',teamA:'POR',teamB:'COD',fullA:'Portugal',fullB:'Congo DR',koIBC:12,city:'Houston, TX',localKO:'12:00',utcKO:'17:00',tz:'UTC-5',dur:105,trainA:'09:30 IBC',pcA:'18:45 IBC',trainB:'13:00 IBC',pcB:'15:45 IBC'},
-  {m:24,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match D',teamA:'UZB',teamB:'COL',fullA:'Uzbekistan',fullB:'Colombia',koIBC:21,city:'Mexico City',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'09:30 IBC',pcA:'19:45 IBC',trainB:'18:30 IBC',pcB:'16:45 IBC'},
+  {m: 21,md: 7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match C',teamA:'GHA',teamB:'PAN',fullA:'Ghana',fullB:'Panama',koIBC:18,city:'Toronto',dur:105,trainA:'18:00 IBC',pcA:'13:30 IBC',trainB:'08:00 IBC',pcB:'14:30 IBC'},
+  {m: 22,md: 7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match B',teamA:'ENG',teamB:'CRO',fullA:'England',fullB:'Croatia',koIBC:15,city:'Dallas, TX',dur:105,trainA:'11:00 IBC',pcA:'18:45 IBC',trainB:'15:00 IBC',pcB:'19:45 IBC'},
+  {m: 23,md: 7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match A',teamA:'POR',teamB:'COD',fullA:'Portugal',fullB:'Congo DR',koIBC:12,city:'Houston, TX',dur:105,trainA:'09:30 IBC',pcA:'18:45 IBC',trainB:'13:00 IBC',pcB:'15:45 IBC'},
+  {m: 24,md: 7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match D',teamA:'UZB',teamB:'COL',fullA:'Uzbekistan',fullB:'Colombia',koIBC:21,city:'Mexico City',dur:105,trainA:'09:30 IBC',pcA:'19:45 IBC',trainB:'18:30 IBC',pcB:'16:45 IBC'},
   // MD8 — 18 Jun
-  {m:25,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match A',teamA:'CZE',teamB:'RSA',fullA:'Czechia',fullB:'South Africa',koIBC:11,city:'Atlanta, GA',localKO:'12:00',utcKO:'16:00',tz:'UTC-4',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'16:00 IBC',pcB:'14:30 IBC'},
-  {m:26,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match B',teamA:'SUI',teamB:'BIH',fullA:'Switzerland',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Los Angeles, CA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'12:45 IBC',pcA:'20:45 IBC',trainB:'11:00 IBC',pcB:'21:45 IBC'},
-  {m:27,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match C',teamA:'CAN',teamB:'QAT',fullA:'Canada',fullB:'Qatar',koIBC:17,city:'Vancouver',localKO:'15:00',utcKO:'22:00',tz:'UTC-7',dur:105,trainA:'17:00 IBC',pcA:'20:45 IBC',trainB:'13:00 IBC',pcB:'17:30 IBC'},
-  {m:28,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match D',teamA:'MEX',teamB:'KOR',fullA:'Mexico',fullB:'Korea Republic',koIBC:20,city:'Guadalajara',localKO:'19:00',utcKO:'01:00+1',tz:'UTC-6',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'17:30 IBC',pcB:'16:30 IBC'},
+  {m: 25,md: 8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match A',teamA:'CZE',teamB:'RSA',fullA:'Czechia',fullB:'South Africa',koIBC:11,city:'Atlanta, GA',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'16:00 IBC',pcB:'14:30 IBC'},
+  {m: 26,md: 8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match B',teamA:'SUI',teamB:'BIH',fullA:'Switzerland',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Los Angeles, CA',dur:105,trainA:'12:45 IBC',pcA:'20:45 IBC',trainB:'11:00 IBC',pcB:'21:45 IBC'},
+  {m: 27,md: 8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match C',teamA:'CAN',teamB:'QAT',fullA:'Canada',fullB:'Qatar',koIBC:17,city:'Vancouver',dur:105,trainA:'17:00 IBC',pcA:'20:45 IBC',trainB:'13:00 IBC',pcB:'17:30 IBC'},
+  {m: 28,md: 8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match D',teamA:'MEX',teamB:'KOR',fullA:'Mexico',fullB:'Korea Republic',koIBC:20,city:'Guadalajara',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'17:30 IBC',pcB:'16:30 IBC'},
+  // MD9 — 19 Jun
+  {m: 29,md: 9,date:'2026-06-19',dateLabel:'19 June 2026',ch:'Match C',teamA:'BRA',teamB:'HAI',fullA:'Brazil',fullB:'Haiti',koIBC:19.5,city:'Philadelphia, PA',dur:105,trainA:'09:00 IBC',pcA:'17:45 IBC',trainB:'16:30 IBC',pcB:'18:45 IBC'},
+  {m: 30,md: 9,date:'2026-06-19',dateLabel:'19 June 2026',ch:'Match B',teamA:'SCO',teamB:'MAR',fullA:'Scotland',fullB:'Morocco',koIBC:17,city:'Boston, MA',dur:105,trainA:'09:00 IBC',pcA:'10:30 IBC',trainB:'17:00 IBC',pcB:'16:15 IBC'},
+  {m: 31,md: 9,date:'2026-06-19',dateLabel:'19 June 2026',ch:'Match D',teamA:'TUR',teamB:'PAR',fullA:'Türkiye',fullB:'Paraguay',koIBC:22,city:'San Francisco, CA',dur:105,trainA:'19:45 IBC',pcA:'16:30 IBC',trainB:'20:30 IBC',pcB:'17:30 IBC'},
+  {m: 32,md: 9,date:'2026-06-19',dateLabel:'19 June 2026',ch:'Match A',teamA:'USA',teamB:'AUS',fullA:'United States',fullB:'Australia',koIBC:14,city:'Seattle, WA',dur:105,trainA:'13:00 IBC',pcA:'17:45 IBC',trainB:'14:00 IBC',pcB:'20:45 IBC'},
+  // MD10 — 20 Jun
+  {m: 33,md:10,date:'2026-06-20',dateLabel:'20 June 2026',ch:'Match B',teamA:'GER',teamB:'CIV',fullA:'Germany',fullB:"Côte d'Ivoire",koIBC:15,city:'Toronto',dur:105,trainA:'10:00 IBC',pcA:'17:45 IBC',trainB:'16:00 IBC',pcB:'14:45 IBC'},
+  {m: 34,md:10,date:'2026-06-20',dateLabel:'20 June 2026',ch:'Match C',teamA:'ECU',teamB:'CUW',fullA:'Ecuador',fullB:'Curaçao',koIBC:19,city:'Kansas City, MO',dur:105,trainA:'08:00 IBC',pcA:'18:45 IBC',trainB:'09:00 IBC',pcB:'19:45 IBC'},
+  {m: 35,md:10,date:'2026-06-20',dateLabel:'20 June 2026',ch:'Match A',teamA:'NED',teamB:'SWE',fullA:'Netherlands',fullB:'Sweden',koIBC:12,city:'Houston, TX',dur:105,trainA:'10:30 IBC',pcA:'18:45 IBC',trainB:'09:30 IBC',pcB:'15:45 IBC'},
+  {m: 36,md:10,date:'2026-06-20',dateLabel:'20 June 2026',ch:'Match D',teamA:'TUN',teamB:'JPN',fullA:'Tunisia',fullB:'Japan',koIBC:23,city:'Monterrey',dur:105,trainA:'23:00 IBC',pcA:'15:30 IBC',trainB:'19:00 IBC',pcB:'16:30 IBC'},
+  // MD11 — 21 Jun
+  {m: 37,md:11,date:'2026-06-21',dateLabel:'21 June 2026',ch:'Match C',teamA:'URU',teamB:'CPV',fullA:'Uruguay',fullB:'Cabo Verde',koIBC:17,city:'Miami, FL',dur:105,trainA:'09:00 IBC',pcA:'17:45 IBC',trainB:'08:00 IBC',pcB:'18:45 IBC'},
+  {m: 38,md:11,date:'2026-06-21',dateLabel:'21 June 2026',ch:'Match A',teamA:'ESP',teamB:'KSA',fullA:'Spain',fullB:'Saudi Arabia',koIBC:11,city:'Atlanta, GA',dur:105,trainA:'10:00 IBC',pcA:'13:30 IBC',trainB:'17:00 IBC',pcB:'14:30 IBC'},
+  {m: 39,md:11,date:'2026-06-21',dateLabel:'21 June 2026',ch:'Match B',teamA:'BEL',teamB:'IRN',fullA:'Belgium',fullB:'IR Iran',koIBC:14,city:'Los Angeles, CA',dur:105,trainA:'13:00 IBC',pcA:'16:30 IBC',trainB:'18:30 IBC',pcB:'20:45 IBC'},
+  {m: 40,md:11,date:'2026-06-21',dateLabel:'21 June 2026',ch:'Match D',teamA:'NZL',teamB:'EGY',fullA:'New Zealand',fullB:'Egypt',koIBC:20,city:'Vancouver',dur:105,trainA:'12:45 IBC',pcA:'16:30 IBC',trainB:'20:00 IBC',pcB:'17:30 IBC'},
+  // MD12 — 22 Jun
+  {m: 41,md:12,date:'2026-06-22',dateLabel:'22 June 2026',ch:'Match C',teamA:'NOR',teamB:'SEN',fullA:'Norway',fullB:'Senegal',koIBC:19,city:'New York, NJ',dur:105,trainA:'09:00 IBC',pcA:'17:45 IBC',trainB:'15:00 IBC',pcB:'13:30 IBC'},
+  {m: 42,md:12,date:'2026-06-22',dateLabel:'22 June 2026',ch:'Match B',teamA:'FRA',teamB:'IRQ',fullA:'France',fullB:'Iraq',koIBC:16,city:'Philadelphia, PA',dur:105,trainA:'16:00 IBC',pcA:'14:30 IBC',trainB:'19:30 IBC',pcB:'13:30 IBC'},
+  {m: 43,md:12,date:'2026-06-22',dateLabel:'22 June 2026',ch:'Match A',teamA:'ARG',teamB:'AUT',fullA:'Argentina',fullB:'Austria',koIBC:12,city:'Dallas, TX',dur:105,trainA:'10:00 IBC',pcA:'18:45 IBC',trainB:'11:00 IBC',pcB:'15:45 IBC'},
+  {m: 44,md:12,date:'2026-06-22',dateLabel:'22 June 2026',ch:'Match D',teamA:'JOR',teamB:'ALG',fullA:'Jordan',fullB:'Algeria',koIBC:22,city:'San Francisco, CA',dur:105,trainA:'22:00 IBC',pcA:'16:30 IBC',trainB:'19:00 IBC',pcB:'17:30 IBC'},
+  // MD13 — 23 Jun
+  {m: 45,md:13,date:'2026-06-23',dateLabel:'23 June 2026',ch:'Match B',teamA:'ENG',teamB:'GHA',fullA:'England',fullB:'Ghana',koIBC:15,city:'Boston, MA',dur:105,trainA:'10:15 IBC',pcA:'17:45 IBC',trainB:'15:00 IBC',pcB:'18:45 IBC'},
+  {m: 46,md:13,date:'2026-06-23',dateLabel:'23 June 2026',ch:'Match C',teamA:'PAN',teamB:'CRO',fullA:'Panama',fullB:'Croatia',koIBC:18,city:'Toronto',dur:105,trainA:'07:30 IBC',pcA:'13:30 IBC',trainB:'18:00 IBC',pcB:'14:15 IBC'},
+  {m: 47,md:13,date:'2026-06-23',dateLabel:'23 June 2026',ch:'Match A',teamA:'POR',teamB:'UZB',fullA:'Portugal',fullB:'Uzbekistan',koIBC:12,city:'Houston, TX',dur:105,trainA:'09:30 IBC',pcA:'18:45 IBC',trainB:'09:30 IBC',pcB:'19:45 IBC'},
+  {m: 48,md:13,date:'2026-06-23',dateLabel:'23 June 2026',ch:'Match D',teamA:'COL',teamB:'COD',fullA:'Colombia',fullB:'Congo DR',koIBC:21,city:'Guadalajara',dur:105,trainA:'18:00 IBC',pcA:'16:45 IBC',trainB:'10:00 IBC',pcB:'19:45 IBC'},
+  // MD14 — 24 Jun
+  {m: 49,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match C',teamA:'SCO',teamB:'BRA',fullA:'Scotland',fullB:'Brazil',koIBC:17,city:'Miami, FL',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'09:00 IBC',pcB:'17:45 IBC'},
+  {m: 50,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match D',teamA:'MAR',teamB:'HAI',fullA:'Morocco',fullB:'Haiti',koIBC:17,city:'Atlanta, GA',dur:105,trainA:'17:00 IBC',pcA:'13:30 IBC',trainB:'10:00 IBC',pcB:'14:45 IBC'},
+  {m: 51,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match A',teamA:'SUI',teamB:'CAN',fullA:'Switzerland',fullB:'Canada',koIBC:14,city:'Vancouver',dur:105,trainA:'13:00 IBC',pcA:'16:30 IBC',trainB:'12:00 IBC',pcB:'17:30 IBC'},
+  {m: 52,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match B',teamA:'BIH',teamB:'QAT',fullA:'Bosnia and Herzegovina',fullB:'Qatar',koIBC:14,city:'Seattle, WA',dur:105,trainA:'11:00 IBC',pcA:'20:45 IBC',trainB:'13:00 IBC',pcB:'17:30 IBC'},
+  {m: 53,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match E',teamA:'CZE',teamB:'MEX',fullA:'Czechia',fullB:'Mexico',koIBC:20,city:'Mexico City',dur:105,trainA:'18:00 IBC',pcA:'15:30 IBC',trainB:'19:30 IBC',pcB:'16:30 IBC'},
+  {m: 54,md:14,date:'2026-06-24',dateLabel:'24 June 2026',ch:'Match F',teamA:'RSA',teamB:'KOR',fullA:'South Africa',fullB:'Korea Republic',koIBC:20,city:'Monterrey',dur:105,trainA:'18:00 IBC',pcA:'15:30 IBC',trainB:'21:30 IBC',pcB:'16:45 IBC'},
+  // MD15 — 25 Jun
+  {m: 55,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match A',teamA:'CUW',teamB:'CIV',fullA:'Curaçao',fullB:"Côte d'Ivoire",koIBC:15,city:'Philadelphia, PA',dur:105,trainA:'09:00 IBC',pcA:'17:45 IBC',trainB:'14:00 IBC',pcB:'18:45 IBC'},
+  {m: 56,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match B',teamA:'ECU',teamB:'GER',fullA:'Ecuador',fullB:'Germany',koIBC:15,city:'New York, NJ',dur:105,trainA:'08:00 IBC',pcA:'17:45 IBC',trainB:'10:00 IBC',pcB:'18:45 IBC'},
+  {m: 57,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match C',teamA:'JPN',teamB:'SWE',fullA:'Japan',fullB:'Sweden',koIBC:18,city:'Dallas, TX',dur:105,trainA:'10:00 IBC',pcA:'14:30 IBC',trainB:'18:00 IBC',pcB:'15:30 IBC'},
+  {m: 58,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match D',teamA:'TUN',teamB:'NED',fullA:'Tunisia',fullB:'Netherlands',koIBC:18,city:'Kansas City, MO',dur:105,trainA:'18:00 IBC',pcA:'14:30 IBC',trainB:'10:30 IBC',pcB:'15:30 IBC'},
+  {m: 59,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match E',teamA:'TUR',teamB:'USA',fullA:'Türkiye',fullB:'United States',koIBC:21,city:'Los Angeles, CA',dur:105,trainA:'19:30 IBC',pcA:'16:30 IBC',trainB:'13:00 IBC',pcB:'17:45 IBC'},
+  {m: 60,md:15,date:'2026-06-25',dateLabel:'25 June 2026',ch:'Match F',teamA:'PAR',teamB:'AUS',fullA:'Paraguay',fullB:'Australia',koIBC:21,city:'San Francisco, CA',dur:105,trainA:'19:30 IBC',pcA:'16:30 IBC',trainB:'21:00 IBC',pcB:'17:30 IBC'},
+  // MD16 — 26 Jun
+  {m: 61,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match A',teamA:'NOR',teamB:'FRA',fullA:'Norway',fullB:'France',koIBC:14,city:'Boston, MA',dur:105,trainA:'16:30 IBC',pcA:'18:00 IBC',trainB:'14:30 IBC',pcB:'09:00 IBC'},
+  {m: 62,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match B',teamA:'SEN',teamB:'IRQ',fullA:'Senegal',fullB:'Iraq',koIBC:14,city:'Toronto',dur:105,trainA:'16:00 IBC',pcA:'13:30 IBC',trainB:'11:00 IBC',pcB:'14:30 IBC'},
+  {m: 63,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match E',teamA:'EGY',teamB:'IRN',fullA:'Egypt',fullB:'IR Iran',koIBC:22,city:'Seattle, WA',dur:105,trainA:'22:00 IBC',pcA:'16:30 IBC',trainB:'18:30 IBC',pcB:'20:45 IBC'},
+  {m: 64,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match F',teamA:'NZL',teamB:'BEL',fullA:'New Zealand',fullB:'Belgium',koIBC:22,city:'Vancouver',dur:105,trainA:'12:45 IBC',pcA:'17:45 IBC',trainB:'13:00 IBC',pcB:'20:45 IBC'},
+  {m: 65,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match C',teamA:'CPV',teamB:'KSA',fullA:'Cabo Verde',fullB:'Saudi Arabia',koIBC:19,city:'Houston, TX',dur:105,trainA:'08:00 IBC',pcA:'18:45 IBC',trainB:'17:30 IBC',pcB:'15:45 IBC'},
+  {m: 66,md:16,date:'2026-06-26',dateLabel:'26 June 2026',ch:'Match D',teamA:'URU',teamB:'ESP',fullA:'Uruguay',fullB:'Spain',koIBC:19,city:'Guadalajara',dur:105,trainA:'09:00 IBC',pcA:'19:45 IBC',trainB:'12:00 IBC',pcB:'16:45 IBC'},
+  // MD17 — 27 Jun
+  {m: 67,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match A',teamA:'PAN',teamB:'ENG',fullA:'Panama',fullB:'England',koIBC:16,city:'New York, NJ',dur:105,trainA:'09:00 IBC',pcA:'14:45 IBC',trainB:'10:15 IBC',pcB:'17:45 IBC'},
+  {m: 68,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match B',teamA:'CRO',teamB:'GHA',fullA:'Croatia',fullB:'Ghana',koIBC:16,city:'Philadelphia, PA',dur:105,trainA:'16:00 IBC',pcA:'18:00 IBC',trainB:'20:00 IBC',pcB:'14:30 IBC'},
+  {m: 69,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match E',teamA:'ALG',teamB:'AUT',fullA:'Algeria',fullB:'Austria',koIBC:21,city:'Kansas City, MO',dur:105,trainA:'18:00 IBC',pcA:'15:30 IBC',trainB:'19:00 IBC',pcB:'14:30 IBC'},
+  {m: 70,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match F',teamA:'JOR',teamB:'ARG',fullA:'Jordan',fullB:'Argentina',koIBC:21,city:'Dallas, TX',dur:105,trainA:'20:15 IBC',pcA:'15:45 IBC',trainB:'16:45 IBC',pcB:'18:45 IBC'},
+  {m: 71,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match C',teamA:'COL',teamB:'POR',fullA:'Colombia',fullB:'Portugal',koIBC:18.5,city:'Miami, FL',dur:105,trainA:'16:00 IBC',pcA:'13:30 IBC',trainB:'17:30 IBC',pcB:'14:30 IBC'},
+  {m: 72,md:17,date:'2026-06-27',dateLabel:'27 June 2026',ch:'Match D',teamA:'COD',teamB:'UZB',fullA:'Congo DR',fullB:'Uzbekistan',koIBC:18.5,city:'Atlanta, GA',dur:105,trainA:'18:00 IBC',pcA:'13:30 IBC',trainB:'10:00 IBC',pcB:'14:30 IBC'},
+  // MD18-34 — Knockout rounds
+  {m: 73,md:18,date:'2026-06-28',dateLabel:'28 June 2026',ch:'Match A',teamA:'2A',teamB:'2B',fullA:'2A',fullB:'2B',koIBC:14,city:'Los Angeles, CA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 74,md:19,date:'2026-06-29',dateLabel:'29 June 2026',ch:'Match B',teamA:'1E',teamB:'3ABCDF',fullA:'1E',fullB:'3ABCDF',koIBC:15.5,city:'Boston, MA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 75,md:19,date:'2026-06-29',dateLabel:'29 June 2026',ch:'Match C',teamA:'1F',teamB:'2C',fullA:'1F',fullB:'2C',koIBC:20,city:'Monterrey',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 76,md:19,date:'2026-06-29',dateLabel:'29 June 2026',ch:'Match A',teamA:'1C',teamB:'2F',fullA:'1C',fullB:'2F',koIBC:12,city:'Houston, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 77,md:20,date:'2026-06-30',dateLabel:'30 June 2026',ch:'Match B',teamA:'1I',teamB:'3CDFGH',fullA:'1I',fullB:'3CDFGH',koIBC:16,city:'New York, NJ',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 78,md:20,date:'2026-06-30',dateLabel:'30 June 2026',ch:'Match A',teamA:'2E',teamB:'2I',fullA:'2E',fullB:'2I',koIBC:12,city:'Dallas, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 79,md:20,date:'2026-06-30',dateLabel:'30 June 2026',ch:'Match C',teamA:'1A',teamB:'3CEFHI',fullA:'1A',fullB:'3CEFHI',koIBC:20,city:'Mexico City',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 80,md:21,date:'2026-07-01',dateLabel:'1 July 2026',ch:'Match A',teamA:'1L',teamB:'3EHIJK',fullA:'1L',fullB:'3EHIJK',koIBC:11,city:'Atlanta, GA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 81,md:21,date:'2026-07-01',dateLabel:'1 July 2026',ch:'Match C',teamA:'1D',teamB:'3BEFIJ',fullA:'1D',fullB:'3BEFIJ',koIBC:19,city:'San Francisco, CA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 82,md:21,date:'2026-07-01',dateLabel:'1 July 2026',ch:'Match B',teamA:'1G',teamB:'3AEHIJ',fullA:'1G',fullB:'3AEHIJ',koIBC:15,city:'Seattle, WA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 83,md:22,date:'2026-07-02',dateLabel:'2 July 2026',ch:'Match B',teamA:'2K',teamB:'2L',fullA:'2K',fullB:'2L',koIBC:18,city:'Toronto',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 84,md:22,date:'2026-07-02',dateLabel:'2 July 2026',ch:'Match A',teamA:'1H',teamB:'2J',fullA:'1H',fullB:'2J',koIBC:14,city:'Los Angeles, CA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 85,md:22,date:'2026-07-02',dateLabel:'2 July 2026',ch:'Match C',teamA:'1B',teamB:'3EFGHIJ',fullA:'1B',fullB:'3EFGHIJ',koIBC:22,city:'Vancouver',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 86,md:23,date:'2026-07-03',dateLabel:'3 July 2026',ch:'Match B',teamA:'1J',teamB:'2H',fullA:'1J',fullB:'2H',koIBC:17,city:'Miami, FL',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 87,md:23,date:'2026-07-03',dateLabel:'3 July 2026',ch:'Match C',teamA:'1K',teamB:'3DEIJL',fullA:'1K',fullB:'3DEIJL',koIBC:20.5,city:'Kansas City, MO',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 88,md:23,date:'2026-07-03',dateLabel:'3 July 2026',ch:'Match A',teamA:'2D',teamB:'2G',fullA:'2D',fullB:'2G',koIBC:13,city:'Dallas, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 89,md:24,date:'2026-07-04',dateLabel:'4 July 2026',ch:'Match B',teamA:'W74',teamB:'W77',fullA:'W74',fullB:'W77',koIBC:16,city:'Philadelphia, PA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 90,md:24,date:'2026-07-04',dateLabel:'4 July 2026',ch:'Match A',teamA:'W73',teamB:'W75',fullA:'W73',fullB:'W75',koIBC:12,city:'Houston, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 91,md:25,date:'2026-07-05',dateLabel:'5 July 2026',ch:'Match A',teamA:'W76',teamB:'W78',fullA:'W76',fullB:'W78',koIBC:15,city:'New York, NJ',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 92,md:25,date:'2026-07-05',dateLabel:'5 July 2026',ch:'Match B',teamA:'W79',teamB:'W80',fullA:'W79',fullB:'W80',koIBC:19,city:'Mexico City',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 93,md:26,date:'2026-07-06',dateLabel:'6 July 2026',ch:'Match A',teamA:'W83',teamB:'W84',fullA:'W83',fullB:'W84',koIBC:14,city:'Dallas, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 94,md:26,date:'2026-07-06',dateLabel:'6 July 2026',ch:'Match B',teamA:'W81',teamB:'W82',fullA:'W81',fullB:'W82',koIBC:19,city:'Seattle, WA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 95,md:27,date:'2026-07-07',dateLabel:'7 July 2026',ch:'Match A',teamA:'W86',teamB:'W88',fullA:'W86',fullB:'W88',koIBC:11,city:'Atlanta, GA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 96,md:27,date:'2026-07-07',dateLabel:'7 July 2026',ch:'Match B',teamA:'W85',teamB:'W87',fullA:'W85',fullB:'W87',koIBC:15,city:'Vancouver',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 97,md:28,date:'2026-07-09',dateLabel:'9 July 2026',ch:'Match A',teamA:'W89',teamB:'W90',fullA:'W89',fullB:'W90',koIBC:15,city:'Boston, MA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 98,md:29,date:'2026-07-10',dateLabel:'10 July 2026',ch:'Match A',teamA:'W93',teamB:'W94',fullA:'W93',fullB:'W94',koIBC:14,city:'Los Angeles, CA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m: 99,md:30,date:'2026-07-11',dateLabel:'11 July 2026',ch:'Match A',teamA:'W91',teamB:'W92',fullA:'W91',fullB:'W92',koIBC:16,city:'Miami, FL',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m:100,md:30,date:'2026-07-11',dateLabel:'11 July 2026',ch:'Match B',teamA:'W95',teamB:'W96',fullA:'W95',fullB:'W96',koIBC:20,city:'Kansas City, MO',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m:101,md:31,date:'2026-07-14',dateLabel:'14 July 2026',ch:'Match A',teamA:'W97',teamB:'W98',fullA:'W97',fullB:'W98',koIBC:14,city:'Dallas, TX',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m:102,md:32,date:'2026-07-15',dateLabel:'15 July 2026',ch:'Match A',teamA:'W99',teamB:'W100',fullA:'W99',fullB:'W100',koIBC:14,city:'Atlanta, GA',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m:103,md:33,date:'2026-07-18',dateLabel:'18 July 2026',ch:'Match A',teamA:'L101',teamB:'L102',fullA:'L101',fullB:'L102',koIBC:16,city:'Miami, FL',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
+  {m:104,md:34,date:'2026-07-19',dateLabel:'19 July 2026',ch:'Match A',teamA:'W101',teamB:'W102',fullA:'W101',fullB:'W102',koIBC:14,city:'New York, NJ',dur:105,trainA:null,pcA:null,trainB:null,pcB:null},
 ];
 
 // ── Active data — loaded from Excel (localStorage) or demo fallback ──────────
@@ -560,21 +652,21 @@ function goLive(){
   });
   setNowLineVisible(targetKey===todayKey);
 
-  // Scroll to axis line — center current time in 1h mode
+  // Scroll to axis line — center current time in zoomed modes
   const axisEl=document.getElementById('now-axis-'+targetKey);
   if(axisEl) setTimeout(()=>{
-    if(currentZoom==='1h'){
+    const wH=zoomWindowH();
+    if(wH!==null){
       const tc=axisEl.closest('.timeline-container');
       const sec=axisEl.closest('.day-section');
       if(tc&&sec){
         const sH=parseFloat(sec.dataset.startH)||0;
-        const sp=parseFloat(sec.dataset.span)||14;
         const d=new Date();
         const totalSec=d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()-5*3600;
         const normSec=((totalSec%86400)+86400)%86400;
         const ibcH=normSec/3600;
         const visibleW=tc.clientWidth-240;
-        const pxh=Math.max(60, Math.round(visibleW/2));
+        const pxh=Math.max(60, Math.round(visibleW/wH));
         const scrollX=Math.max(0, Math.round((ibcH-sH)*pxh - visibleW/2));
         tc.scrollLeft=scrollX;
         setTimeout(updateMirror,50);
@@ -681,14 +773,15 @@ allDays.forEach(day=>{
   dm.forEach(match=>{
     const c=CH_COLORS[match.ch]||CH_COLORS['Match A'];
     const koH=match.koIBC;
-    const endH=koH+match.dur/60;
+    const fwH=koH+match.dur/60;                    // Final Whistle hour
+    const endH=fwH+POST_FW_DISPLAY_MIN/60;         // visual block end (FW + display buffer)
     const koL=pct(koH).toFixed(2);
     const mL=pct(koH).toFixed(2);
     const mW=(pct(endH)-pct(koH)).toFixed(2);
 
     let servicesHtml='';
     SERVICES.forEach(svc=>{
-      const svStartH=koH+svc.start/60, svEndH=koH+svc.stop/60;
+      const svStartH=koH+svc.start/60, svEndH=fwH+svc.stop/60;
       const svL=pct(svStartH).toFixed(2), svW=(pct(svEndH)-pct(svStartH)).toFixed(2);
       const svStartLabel=hhmm(svStartH), svEndLabel=hhmm(svEndH);
       let feedsHtml='';
@@ -698,10 +791,10 @@ allDays.forEach(day=>{
         if(f.individual){
           feedsHtml+=`<div class="feed-row" data-feed="${f.name}" data-individual="1" data-ch="${match.ch}"><div class="feed-label" style="background:${c.feed};"><div class="feed-pip" style="background:${c.pip};"></div><span class="feed-name">${f.name}</span></div><div class="feed-track" style="background:${c.feed};"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><span class="indiv-label" style="left:${koL}%">→ see MD-1 day</span></div></div>`;
         } else {
-          const fSH=koH+f.start/60, fEH=koH+f.stop/60;
+          const fSH=koH+f.start/60, fEH=fwH+f.stop/60;
           const fL=pct(fSH).toFixed(2), fW=(pct(fEH)-pct(fSH)).toFixed(2);
-          const fOffStart=(f.start>0?'+':'')+f.start+'min';
-          const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min';
+          const fOffStart=(f.start>0?'+':'')+f.start+'min KO';
+          const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min FW';
           // Service window inner block
           const innerStartH = Math.max(fSH, svStartH);
           const innerEndH   = Math.min(fEH, svEndH);
@@ -795,10 +888,10 @@ allDays.forEach(day=>{
 
     let dedupFeedsHtml='';
     uniqueFeeds.forEach(f=>{
-      const fSH=koH+f.start/60, fEH=koH+f.stop/60;
+      const fSH=koH+f.start/60, fEH=fwH+f.stop/60;
       const fL=pct(fSH).toFixed(2), fW=(pct(fEH)-pct(fSH)).toFixed(2);
-      const fOffStart=(f.start>0?'+':'')+f.start+'min';
-      const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min';
+      const fOffStart=(f.start>0?'+':'')+f.start+'min KO';
+      const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min FW';
       // Subtask markers
       let stHtml='';
       if(f.subtasks.length){
@@ -834,7 +927,7 @@ allDays.forEach(day=>{
       </div>`;
     });
 
-    matchRows+=`<div class="match-group"><div class="match-row" onclick="toggleMatch(this)" data-teams="${match.fullA} vs ${match.fullB}" data-ch="${match.ch}" data-city="${match.city}" data-ko="${hhmm(koH)}" data-end="${hhmm(endH)}" data-local="${match.localKO}" data-utc="${match.utcKO}" data-tz="${match.tz}" data-train-a="${match.trainA}" data-pc-a="${match.pcA}" data-train-b="${match.trainB}" data-pc-b="${match.pcB}" data-team-a="${match.teamA}" data-team-b="${match.teamB}" data-md1="${md1Label}"><div class="row-label" style="border-left:3px solid ${c.pip};"><span class="toggle-arrow" style="color:${c.pip};">▶</span><span class="match-id">M${match.m}</span><span class="match-teams">${match.teamA} vs ${match.teamB}</span><span class="match-ch" style="color:${c.pip};">${match.ch}</span></div><div class="track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="match-block" style="left:${mL}%;width:${mW}%;background:${c.full};"><span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span><span class="block-ko" style="color:${c.text};">${hhmm(koH)}</span></div></div></div><div class="services-panel">${servicesHtml}</div><div class="feeds-panel" style="display:none;">${dedupFeedsHtml}</div></div>`;
+    matchRows+=`<div class="match-group"><div class="match-row" onclick="toggleMatch(this)" data-teams="${match.fullA} vs ${match.fullB}" data-ch="${match.ch}" data-city="${match.city}" data-ko="${hhmm(koH)}" data-end="${hhmm(endH)}" data-local="${match.localKO}" data-utc="${match.utcKO}" data-tz="${match.tz}" data-train-a="${match.trainA}" data-pc-a="${match.pcA}" data-train-b="${match.trainB}" data-pc-b="${match.pcB}" data-team-a="${match.teamA}" data-team-b="${match.teamB}" data-md1="${md1Label}"><div class="row-label" style="border-left:3px solid ${c.pip};"><span class="toggle-arrow" style="color:${c.pip};">▶</span><span class="match-id">M${match.m}</span><span class="match-teams">${match.teamA} vs ${match.teamB}</span><span class="match-ch" style="color:${c.pip};">${match.ch}</span></div><div class="track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="match-block" style="left:${mL}%;width:${mW}%;background:${c.full};border-right:2px dashed ${c.text}4d;"><span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span><span class="block-ko" style="color:${c.text};">${hhmm(koH)}</span><span style="color:${c.text};opacity:.35;font-size:8px;margin-left:auto;flex-shrink:0;letter-spacing:.04em;">est.</span></div></div></div><div class="services-panel">${servicesHtml}</div><div class="feeds-panel" style="display:none;">${dedupFeedsHtml}</div></div>`;
   });
 
   // ── MD-1 channel rows (same structure as match rows) ──
@@ -1064,8 +1157,8 @@ function toggleSvc(row){
   if(body) body.style.display=body.style.display==='none'?'':'none';
 }
 
-const PX_PER_HOUR_PRESETS={'1h':160,'all':null};
-let currentZoom='1h';
+const PX_PER_HOUR_PRESETS={'1h':null,'3h':null,'all':null};
+let currentZoom='all';
 
 function setZoom(mode, btn){
   currentZoom=mode;
@@ -1074,31 +1167,33 @@ function setZoom(mode, btn){
   applyZoom();
 }
 
+function zoomWindowH(){ return currentZoom==='1h' ? 2 : currentZoom==='3h' ? 3 : null; }
+
 function applyZoom(){
-  const pxh=PX_PER_HOUR_PRESETS[currentZoom];
+  const windowH=zoomWindowH();
   document.querySelectorAll('.timeline-container').forEach(tc=>{
     const sec=tc.closest('.day-section');
     if(!sec||sec.style.display==='none') return;
     const sp=parseFloat(sec.dataset.span)||14;
     const sH=parseFloat(sec.dataset.startH)||0;
     let trackW;
-    if(pxh===null){
+    if(windowH===null){
       // All: fit entire day into container width
       const availW=tc.parentElement.clientWidth-4;
       trackW=Math.max(availW-240, 300);
       tc.scrollLeft=0;
     } else {
-      // 1h: 2-hour visible window — px/hour derived from container width
+      // 1h / 3h: fixed visible window derived from container width
       const visibleTrackW=tc.clientWidth-240;
-      const pxh2h=Math.max(60, Math.round(visibleTrackW/2));
-      trackW=Math.round(sp*pxh2h);
+      const pxh=Math.max(60, Math.round(visibleTrackW/windowH));
+      trackW=Math.round(sp*pxh);
       // Scroll to center current IBC time (or start of day)
       const d=new Date();
       const totalSec=d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()-5*3600;
       const normSec=((totalSec%86400)+86400)%86400;
       const ibcH=normSec/3600;
       const targetH=(ibcH>=sH&&ibcH<=(sH+sp))?ibcH:sH;
-      const scrollX=Math.max(0, Math.round((targetH-sH)*pxh2h - visibleTrackW/2));
+      const scrollX=Math.max(0, Math.round((targetH-sH)*pxh - visibleTrackW/2));
       tc.scrollLeft=scrollX;
     }
     tc.style.setProperty('--track-w', trackW+'px');
@@ -1629,188 +1724,203 @@ function setFileStatus(ok, msg){
 
 function parseXlFile(file){
   setFileStatus(false, '⟳ reading…');
+  const isCsv = /\.(csv|tsv|txt)$/i.test(file.name);
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const wb = XLSX.read(e.target.result, {type:'array'});
+      let wb;
+      if(isCsv){
+        // Parse CSV/TSV as a single-sheet workbook using SheetJS
+        const text = e.target.result;
+        const delim = file.name.toLowerCase().endsWith('.csv') ? ',' : '\t';
+        wb = XLSX.read(text, {type:'string', raw:true, FS:delim});
+      } else {
+        wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      }
       const result = parseWorkbook(wb);
       if(result.error){ setFileStatus(false, '✕ ' + result.error); return; }
       _parsedXlData = result;
       setFileStatus(true, '✓ ready  (' + result.matches.length + ' matches)');
     } catch(err){
-      setFileStatus(false, '✕ parse error');
+      setFileStatus(false, '✕ ' + (err.message || String(err)));
       console.error(err);
     }
   };
   reader.onerror = () => setFileStatus(false, '✕ file error');
-  reader.readAsArrayBuffer(file);
+  if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
 }
 
 // ── Workbook parser ──────────────────────────────────────────────────────────
 
 function parseWorkbook(wb){
   const sheetNames = wb.SheetNames;
-  if(!sheetNames.includes('Matches')) return {error:'Missing "Matches" sheet'};
-  if(!sheetNames.includes('Services')) return {error:'Missing "Services" sheet'};
-  if(!sheetNames.includes('Feeds')) return {error:'Missing "Feeds" sheet'};
 
-  // Helper: sheet to array of row-objects (header in row 2, data from row 3)
+  // ── Inner helpers ─────────────────────────────────────────────────
+  function str(v){ return v===null||v===undefined ? null : String(v).trim(); }
+  function num(v){ return v===null||v===undefined ? null : Number(v); }
+  function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,10)||'svc'; }
+
+  // Handles "HH:MM", "HH:MM:SS" strings AND Excel time serials (0.0–1.0 fraction of day)
+  function hhmmToDecimal(v){
+    if(v===null||v===undefined) return null;
+    if(typeof v==='number'){ return (v>=0&&v<=1) ? v*24 : null; }
+    const m=String(v).match(/^(\d{1,2}):(\d{2})/);
+    if(!m) return null;
+    return parseInt(m[1])+parseInt(m[2])/60;
+  }
+
+  // Handles "DD/MM/YYYY" strings AND Excel date serials (integer days since 1900-01-00)
+  function ddmmyyyyToISO(v){
+    if(v===null||v===undefined) return null;
+    if(typeof v==='number'&&v>1000){
+      const d=new Date(Math.round((v-25569)*86400*1000));
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    }
+    const m=String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(!m) return null;
+    return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+
+  function dateLabel(iso){
+    if(!iso) return '';
+    const [y,mo,d]=iso.split('-');
+    const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return `${parseInt(d)} ${mn[parseInt(mo)-1]} ${y}`;
+  }
+
+  // Converts any time value (serial, "HH:MM:SS", "HH:MM") to "HH:MM IBC" string
+  function toIBCTimeStr(v){
+    if(v===null||v===undefined||v==='') return null;
+    let s;
+    if(typeof v==='number'){
+      if(v<0||v>1) return null;
+      const tot=Math.round(v*24*60);
+      s=`${String(Math.floor(tot/60)).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
+    } else {
+      s=String(v).trim();
+      if(!s) return null;
+      if(s.endsWith('IBC')) return s;
+      s=s.replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1'); // strip seconds: HH:MM:SS → HH:MM
+    }
+    return s+' IBC';
+  }
+
+  // sheet → array of row-objects; auto-detects whether headers are in row 0 or 1
   function sheetRows(name, headerRow){
-    const ws = wb.Sheets[name];
+    const ws=wb.Sheets[name];
     if(!ws) return [];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
-    const hdr = rows[headerRow || 1]; // 0-indexed; row 2 = index 1
-    const out = [];
-    for(let i = (headerRow||1)+1; i < rows.length; i++){
-      const r = rows[i];
-      if(!r || r.every(v=>v===null||v==='')) continue;
-      const obj = {};
-      hdr.forEach((h,j) => { if(h) obj[String(h).trim()] = r[j] ?? null; });
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    if(rows.length<1) return [];
+    if(headerRow===undefined){
+      // Source format: row 0 IS the header (no banner). Custom format: row 0 = banner, row 1 = header.
+      const r0=(rows[0]||[]).map(v=>v?String(v).trim():'');
+      headerRow=(r0.includes('M#')||r0.includes('IBC Time')||r0.includes('Channels')||r0.includes('Date')&&r0.includes('City'))?0:1;
+    }
+    const hdr=rows[headerRow];
+    if(!hdr||!Array.isArray(hdr)) return [];
+    const out=[];
+    for(let i=headerRow+1;i<rows.length;i++){
+      const r=rows[i];
+      if(!r||r.every(v=>v===null||v==='')) continue;
+      const obj={};
+      hdr.forEach((h,j)=>{ if(h) obj[String(h).trim()]=r[j]??null; });
       out.push(obj);
     }
     return out;
   }
 
-  // Helpers
-  function str(v){ return v===null||v===undefined ? null : String(v).trim(); }
-  function num(v){ return v===null||v===undefined ? null : Number(v); }
-  function hhmmToDecimal(s){
-    if(!s) return null;
-    const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-    if(!m) return null;
-    return parseInt(m[1]) + parseInt(m[2])/60;
-  }
-  function ddmmyyyyToISO(s){
-    if(!s) return null;
-    const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if(!m) return null;
-    return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  }
-  function dateLabel(iso){
-    if(!iso) return '';
-    const [y,mo,d] = iso.split('-');
-    const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    return `${parseInt(d)} ${mNames[parseInt(mo)-1]} ${y}`;
-  }
-  function toIBCTimeStr(v){
-    if(!v) return null;
-    const s = String(v).trim();
-    return s.endsWith('IBC') ? s : s + ' IBC';
-  }
-  function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,10) || 'svc'; }
-
-  // ── Settings (optional) ──────────────────────────────────────────
-  let settings = {};
+  // ── Settings (optional) ───────────────────────────────────────────
+  let settings={};
   if(sheetNames.includes('Settings')){
-    sheetRows('Settings').forEach(r => {
-      const k = str(r['Key']); const v = r['Value'];
-      if(k) settings[k] = v;
+    sheetRows('Settings').forEach(r=>{
+      const k=str(r['Key']); if(k) settings[k]=r['Value'];
     });
   }
-  const matchDurMin = num(settings['match_duration_min']) || 105;
+  const matchDurMin=num(settings['match_duration_min'])||105;
 
-  // ── Services ──────────────────────────────────────────────────────
-  const svcRows = sheetRows('Services');
-  const svcMap = {}; // name → svc object
-  // Normalize column names (some variants from v2 vs v3)
-  svcRows.forEach((r,i) => {
-    const rawName = str(r['Service Name'] ?? r['Service']);
-    if(!rawName) return;
-    // skip note rows
-    if(rawName.startsWith('↑') || rawName.startsWith('Edit')) return;
-    const svc = {
-      id: slugify(rawName) + '_' + i,
-      name: rawName,
-      start: num(r['Start Offset\n(min from KO)'] ?? r['Start Offset'] ?? r['Start\nOffset'] ?? r['start']) || 0,
-      stop:  num(r['Stop Offset\n(min from KO)']  ?? r['Stop Offset']  ?? r['Stop\nOffset']  ?? r['stop'])  || 0,
-      feeds: [],
-    };
-    svcMap[rawName] = svc;
-  });
-
-  // ── Feeds ─────────────────────────────────────────────────────────
-  const feedRows = sheetRows('Feeds');
-  feedRows.forEach(r => {
-    const svcName = str(r['Service']);
-    const feedName = str(r['Feed Name'] ?? r['Feed']);
-    if(!svcName || !feedName) return;
-    if(feedName.startsWith('↑')) return;
-    if(!svcMap[svcName]) return; // unknown service, skip
-
-    const isIndiv = !!(r['Individual\nSchedule'] ?? r['Individual']);
-    const activeFrom = str(r['active_from\n(DD/MM/YYYY)'] ?? r['active_from'] ?? r['Active From'] ?? null);
-
-    const feed = {
-      name: feedName,
-      start: isIndiv ? null : num(r['TX Start\n(min from KO)'] ?? r['TX Start'] ?? r['start']),
-      stop:  isIndiv ? null : num(r['TX End\n(min from KO)']   ?? r['TX End']   ?? r['stop']),
-      individual: isIndiv || undefined,
-      subtasks: [],
-    };
-    if(activeFrom) feed.activeFrom = activeFrom;
-    svcMap[svcName].feeds.push(feed);
-  });
-
-  // ── Subtasks ──────────────────────────────────────────────────────
-  if(sheetNames.includes('Subtasks')){
-    sheetRows('Subtasks').forEach(r => {
-      const svcName  = str(r['Service']);
-      const feedName = str(r['Feed']);
-      const stName   = str(r['Subtask Name'] ?? r['Subtask']);
-      const offset   = num(r['Start Offset\n(min from KO)'] ?? r['Start Offset'] ?? r['offset']);
-      if(!svcName || !feedName || !stName || offset===null) return;
-      const svc = svcMap[svcName];
-      if(!svc) return;
-      const feed = svc.feeds.find(f => f.name===feedName);
-      if(!feed) return;
-      feed.subtasks.push({name: stName, offset: offset});
+  // ── Services + Feeds + Subtasks (optional — fall back to DEMO_SERVICES) ──
+  let services;
+  if(sheetNames.includes('Services')){
+    const svcMap={};
+    sheetRows('Services').forEach((r,i)=>{
+      const rawName=str(r['Service Name']??r['Service']);
+      if(!rawName||rawName.startsWith('↑')||rawName.startsWith('Edit')) return;
+      svcMap[rawName]={
+        id:slugify(rawName)+'_'+i, name:rawName, feeds:[],
+        start: num(r['Start Offset\n(min from KO)']??r['Start Offset']??r['Start\nOffset']??r['start'])||0,
+        stop:  num(r['Stop Offset\n(min from FW)'] ??r['Stop Offset\n(min from KO)']??r['Stop Offset']??r['Stop\nOffset']??r['stop'])||0,
+      };
     });
+    if(sheetNames.includes('Feeds')){
+      sheetRows('Feeds').forEach(r=>{
+        const svcName=str(r['Service']), feedName=str(r['Feed Name']??r['Feed']);
+        if(!svcName||!feedName||feedName.startsWith('↑')||!svcMap[svcName]) return;
+        const isIndiv=!!(r['Individual\nSchedule']??r['Individual']);
+        const af=str(r['active_from\n(DD/MM/YYYY)']??r['active_from']??r['Active From']??null);
+        const feed={
+          name:feedName, individual:isIndiv||undefined, subtasks:[],
+          start:isIndiv?null:num(r['TX Start\n(min from KO)']??r['TX Start']??r['start']),
+          stop: isIndiv?null:num(r['TX End\n(min from FW)'] ??r['TX End\n(min from KO)']??r['TX End']??r['stop']),
+        };
+        if(af) feed.activeFrom=af;
+        svcMap[svcName].feeds.push(feed);
+      });
+    }
+    if(sheetNames.includes('Subtasks')){
+      sheetRows('Subtasks').forEach(r=>{
+        const svcName=str(r['Service']),feedName=str(r['Feed']),stName=str(r['Subtask Name']??r['Subtask']);
+        const offset=num(r['Start Offset\n(min from KO)']??r['Start Offset']??r['offset']);
+        if(!svcName||!feedName||!stName||offset===null) return;
+        const svc=svcMap[svcName]; if(!svc) return;
+        const feed=svc.feeds.find(f=>f.name===feedName); if(!feed) return;
+        feed.subtasks.push({name:stName,offset});
+      });
+    }
+    services=Object.values(svcMap).filter(s=>s.feeds.length>0);
+    if(!services.length) services=DEMO_SERVICES;
+  } else {
+    services=DEMO_SERVICES;
   }
-
-  const services = Object.values(svcMap).filter(s => s.feeds.length > 0);
 
   // ── Matches ───────────────────────────────────────────────────────
-  const matchRows = sheetRows('Matches');
-  if(!matchRows.length) return {error:'No data rows in Matches sheet'};
+  // Accept "Matches" sheet OR fall back to the first sheet (source format)
+  const matchSheetName=sheetNames.includes('Matches')?'Matches':sheetNames[0];
+  const matchRows=sheetRows(matchSheetName);
+  if(!matchRows.length) return {error:'No data rows found in "'+matchSheetName+'" sheet'};
 
-  const parsedMatches = [];
-  matchRows.forEach(r => {
-    const mNum = num(r['M#']);
-    if(!mNum) return;
-    const rawDate = str(r['Date\n(DD/MM/YYYY)'] ?? r['Date']);
-    const isoDate = ddmmyyyyToISO(rawDate);
+  const parsedMatches=[];
+  matchRows.forEach((r,idx)=>{
+    // M# optional — auto-number from row index if missing
+    const mNum=num(r['M#'])||(idx+1);
+    const isoDate=ddmmyyyyToISO(r['Date\n(DD/MM/YYYY)']??r['Date']);
     if(!isoDate) return;
-
-    const rawKO = str(r['IBC KO\n(HH:MM)'] ?? r['IBC KO']);
-    const koIBC = hhmmToDecimal(rawKO);
-    if(koIBC === null) return;
-
-    const match = {
+    // IBC Time column (source format) or IBC KO column (custom format)
+    const koIBC=hhmmToDecimal(r['IBC KO\n(HH:MM)']??r['IBC KO']??r['IBC Time']);
+    if(koIBC===null) return;
+    parsedMatches.push({
       m:         Math.round(mNum),
-      md:        Math.round(num(r['MD#']) || 0),
+      md:        Math.round(num(r['MD#'])||0),
       date:      isoDate,
       dateLabel: dateLabel(isoDate),
-      ch:        str(r['Channel\n(Match A-F)'] ?? r['Channel']) || 'Match A',
-      teamA:     str(r['Team A\n(trigram)'] ?? r['Team A']) || '???',
-      teamB:     str(r['Team B\n(trigram)'] ?? r['Team B']) || '???',
-      fullA:     str(r['Full Name A'] ?? r['Team A\n(trigram)'] ?? r['Team A']) || '???',
-      fullB:     str(r['Full Name B'] ?? r['Team B\n(trigram)'] ?? r['Team B']) || '???',
-      city:      str(r['City']) || '',
-      localKO:   str(r['Local KO\n(HH:MM)'] ?? r['Local KO']) || '',
-      utcKO:     str(r['UTC KO\n(HH:MM)']   ?? r['UTC KO'])   || '',
-      tz:        str(r['Time Zone'] ?? r['TZ']) || '',
-      koIBC:     koIBC,
-      dur:       matchDurMin,
-      trainA:    toIBCTimeStr(r['MD-1\nTrain A (IBC)'] ?? r['Train A']),
-      pcA:       toIBCTimeStr(r['MD-1\nPC A (IBC)']    ?? r['PC A']),
-      trainB:    toIBCTimeStr(r['MD-1\nTrain B (IBC)'] ?? r['Train B']),
-      pcB:       toIBCTimeStr(r['MD-1\nPC B (IBC)']    ?? r['PC B']),
-    };
-    parsedMatches.push(match);
+      ch:        str(r['Channel\n(Match A-F)']??r['Channel']??r['Channels'])||'Match A',
+      // Source format: "Team A" = full name, "Trigramm A" = trigram
+      // Custom format: "Full Name A" = full name, "Team A\n(trigram)" = trigram
+      teamA:     str(r['Team A\n(trigram)']??r['Trigramm A']??r['Trigram A'])||'???',
+      teamB:     str(r['Team B\n(trigram)']??r['Trigramm B']??r['Trigram B'])||'???',
+      fullA:     str(r['Full Name A']??r['Team A'])||'???',
+      fullB:     str(r['Full Name B']??r['Team B'])||'???',
+      city:      str(r['City'])||'',
+      koIBC,
+      dur:       num(r['Dur (min)'])||matchDurMin,
+      trainA:    toIBCTimeStr(r['MD-1\nTrain A (IBC)']??r['MD-1 Training A']??r['Train A']),
+      pcA:       toIBCTimeStr(r['MD-1\nPC A (IBC)']   ??r['MD-1 PC A']      ??r['PC A']),
+      trainB:    toIBCTimeStr(r['MD-1\nTrain B (IBC)']??r['MD-1 Training B']??r['Train B']),
+      pcB:       toIBCTimeStr(r['MD-1\nPC B (IBC)']   ??r['MD-1 PC B']      ??r['PC B']),
+    });
   });
 
   if(!parsedMatches.length) return {error:'No valid match rows parsed'};
-  return {services, matches: parsedMatches};
+  return {services, matches:parsedMatches};
 }
 
 // ── Apply loaded data ────────────────────────────────────────────────────────
