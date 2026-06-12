@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FWC26 — Transmission Schedule</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;
+  --s1:#141720;
+  --s2:#181c28;
+  --s3:#1c2030;
+  --nav:#0f1219;
+  --border:rgba(255,255,255,0.055);
+  --border2:rgba(255,255,255,0.10);
+  --text:#dde1ed;
+  --text2:#8b90a4;
+  --text3:#484f66;
+  --accent:#c8a84b;
+  --label-bg:var(--s1);
+}
+body.light-mode{
+  --bg:#eef1f6;
+  --s1:#ffffff;
+  --s2:#f0f3f8;
+  --s3:#e8ecf3;
+  --nav:#f8f9fc;
+  --border:rgba(0,0,0,0.09);
+  --border2:rgba(0,0,0,0.16);
+  --text:#1a1d2e;
+  --text2:#4a4f66;
+  --text3:#8a92b0;
+  --label-bg:var(--s1);
+}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono','Consolas','Liberation Mono',monospace;font-size:13px;line-height:1.4;min-height:100vh;overflow-x:hidden;}
+
+/* STICKY NAV */
+#nav-bar{position:sticky;top:0;z-index:100;background:var(--nav);border-bottom:1px solid var(--border2);padding:10px 24px;}
+.nav-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.nav-title{font-size:11px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);}
+.nav-meta{font-size:11px;color:var(--text3);letter-spacing:.04em;}
+.nav-meta strong{color:var(--text2);}
+#live-btn{background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.4);color:var(--accent);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 14px;border-radius:3px;cursor:pointer;font-family:inherit;transition:background .15s;}
+#live-btn:hover{background:rgba(200,168,75,.22);}
+#live-btn.active{background:rgba(200,168,75,.25);border-color:var(--accent);}
+.zoom-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s,border-color .12s;}
+.zoom-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);border-color:var(--border2);}
+.zoom-btn.active{background:rgba(128,128,128,.14);color:var(--text);border-color:var(--border2);}
+
+/* CALENDAR STRIP */
+#cal-strip{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+#cal-strip::-webkit-scrollbar{display:none;}
+.cal-day{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:4px 7px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:background .12s,border-color .12s;min-width:38px;}
+.cal-day:hover{background:rgba(128,128,128,.08);}
+.cal-day.has-matches{border-color:var(--border2);}
+.cal-day.selected{background:rgba(200,168,75,.15);border-color:rgba(200,168,75,.5);}
+.cal-day.today .cal-dn{color:var(--accent);}
+.cal-dw{font-size:8px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;}
+.cal-dn{font-size:11px;font-weight:600;color:var(--text2);}
+.cal-mo{font-size:7px;color:var(--text3);letter-spacing:.04em;}
+.cal-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin-top:2px;opacity:0;}
+.cal-day.has-matches .cal-dot{opacity:.7;}
+.cal-day.has-md1 .cal-dot{opacity:.4;background:var(--text3);}
+.cal-day.selected .cal-dot{opacity:1;}
+
+/* MAIN CONTENT */
+#main{padding:16px 24px 40px;}
+
+/* STICKY SCROLL MIRROR */
+#scroll-mirror-wrap{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--nav);border-top:1px solid var(--border2);padding:0 24px;height:14px;overflow-x:auto;overflow-y:hidden;}
+#scroll-mirror-inner{height:1px;}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:16px;align-items:center;}
+
+.day-section{margin-bottom:28px;}
+.day-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.day-badge{background:var(--accent);color:#000;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:2px;}
+.day-title{font-size:13px;font-weight:600;color:var(--text);letter-spacing:.04em;}
+.day-sub{font-size:11px;color:var(--text3);margin-left:auto;}
+
+.timeline-container{background:var(--s1);border:1px solid var(--border);border-radius:6px;overflow-x:auto;overflow-y:visible;scrollbar-width:none;max-width:var(--tc-max-w,none);}
+.timeline-container::-webkit-scrollbar{display:none;}
+
+.time-axis{display:flex;border-bottom:1px solid var(--border2);}
+.time-axis-label{width:240px;min-width:240px;flex-shrink:0;background:var(--s1);position:relative;z-index:21;box-shadow:6px 0 10px rgba(0,0,0,.35);}
+.time-axis-track{position:relative;width:var(--track-w,640px);flex-shrink:0;height:26px;}
+.time-tick{position:absolute;top:0;height:100%;padding:5px 0 5px 5px;font-size:10px;color:var(--text3);letter-spacing:.03em;border-left:1px solid var(--border);}
+
+/* MATCH ROW */
+.match-row{display:flex;align-items:center;min-height:40px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.match-row:hover{background:rgba(128,128,128,.04);}
+.row-label{width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:7px;padding:0 10px 0 12px;border-right:1px solid var(--border);position:relative;z-index:20;background:var(--label-bg);box-shadow:6px 0 10px rgba(0,0,0,.35);}
+.toggle-arrow{font-size:10px;color:var(--text3);transition:transform .15s;flex-shrink:0;}
+.match-row.expanded .toggle-arrow{transform:rotate(90deg);}
+.match-id{font-size:10px;color:var(--text2);letter-spacing:.05em;flex-shrink:0;min-width:24px;}
+.match-teams{font-size:12px;font-weight:600;color:var(--text);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.match-ch{font-size:10px;color:var(--text3);white-space:nowrap;margin-left:auto;padding-left:4px;flex-shrink:0;}
+.track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:40px;}
+
+.services-panel{display:none;}
+.services-panel.open{display:block;}
+
+/* SERVICE ROW */
+.service-row{display:flex;align-items:center;min-height:30px;border-bottom:1px solid var(--border);background:var(--s2);}
+.svc-label{width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 10px 0 14px;border-right:1px solid var(--border);cursor:pointer;position:relative;z-index:20;background:var(--s2);box-shadow:6px 0 10px rgba(0,0,0,.35);}
+.svc-pip{width:3px;height:16px;border-radius:1px;flex-shrink:0;}
+.svc-name{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.svc-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:30px;}
+.svc-feeds-body{border-bottom:1px solid var(--border);}
+.service-row.svc-open .svc-arrow{transform:rotate(90deg);}
+
+/* FEED ROW */
+.feed-row{display:flex;align-items:center;min-height:26px;border-bottom:1px solid var(--border);background:var(--s3);}
+.feed-row:last-child{border-bottom:none;}
+.feed-label{width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:5px;padding:0 10px 0 36px;border-right:1px solid var(--border);position:relative;z-index:20;background:var(--s3);box-shadow:6px 0 10px rgba(0,0,0,.35);}
+.feed-pip{width:2px;height:12px;border-radius:1px;flex-shrink:0;opacity:.5;}
+.feed-name{font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.feed-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:26px;}
+
+/* BLOCKS */
+.match-block{position:absolute;top:5px;height:30px;border-radius:4px;display:flex;align-items:center;padding:0 10px;gap:8px;overflow:hidden;cursor:default;}
+.svc-block{position:absolute;top:4px;height:22px;border-radius:3px;display:flex;align-items:center;padding:0 8px;overflow:hidden;}
+.feed-block{position:absolute;top:4px;height:18px;border-radius:2px;display:flex;align-items:center;padding:0 6px;overflow:visible;}
+.subtask-marker{position:absolute;top:-2px;bottom:-2px;width:2px;border-radius:1px;z-index:4;cursor:default;opacity:.85;}
+.subtask-marker:hover{opacity:1;}
+.block-teams{font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.02em;}
+.block-ko{font-size:10px;font-weight:700;opacity:.7;margin-left:auto;white-space:nowrap;}
+.svc-block-label{font-size:10px;font-weight:500;white-space:nowrap;letter-spacing:.02em;}
+.feed-block-label{font-size:9px;white-space:nowrap;letter-spacing:.02em;}
+.indiv-label{position:absolute;top:6px;font-size:9px;color:var(--text3);padding-left:5px;letter-spacing:.03em;}
+
+.md1-group-header{display:flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border-bottom:1px solid var(--border);background:rgba(128,128,128,.03);cursor:pointer;user-select:none;}
+.md1-group-header:hover{background:rgba(128,128,128,.06);}
+.md1-group-header.open .toggle-arrow{transform:rotate(90deg);}
+.md1-group-body{border-bottom:1px solid var(--border);}
+.md1-row{opacity:.88;}
+.md1-row:hover{background:rgba(128,128,128,.04)!important;}
+
+/* GRID + NOW LINE */
+.grid-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;}
+.gl{position:absolute;top:0;bottom:0;width:1px;background:rgba(128,128,128,.06);}
+.ko-line{position:absolute;top:0;bottom:0;width:1px;z-index:2;pointer-events:none;}
+.now-line{position:absolute;top:0;bottom:0;width:2px;z-index:5;pointer-events:none;background:#fff;opacity:.6;}
+#now-label{position:fixed;z-index:9998;pointer-events:none;font-size:10px;font-weight:600;color:#fff;font-family:'SF Mono','Consolas',monospace;letter-spacing:.05em;background:rgba(20,25,45,.95);border:1px solid rgba(255,255,255,.2);padding:3px 8px;border-radius:3px;display:none;transform:translateX(-50%);}
+
+/* TOOLTIP — 50% bigger */
+.tooltip{position:fixed;background:#1b1f2e;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:14px 18px;pointer-events:none;z-index:9999;display:none;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,.6);}
+.tt-head{font-size:14px;font-weight:700;color:var(--text);margin-bottom:9px;letter-spacing:.02em;}
+.tt-row{display:flex;justify-content:space-between;gap:18px;margin-bottom:3px;font-size:12px;}
+.tt-k{color:var(--text3);}
+.tt-v{color:var(--text);font-weight:500;}
+.tt-div{border-top:1px solid rgba(255,255,255,.07);margin:7px 0;}
+.tt-ch-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+
+footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--text3);letter-spacing:.04em;}
+
+/* THEME TOGGLE */
+#theme-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:11px;font-family:inherit;padding:4px 12px;border-radius:3px;cursor:pointer;letter-spacing:.05em;transition:background .12s;}
+#theme-btn:hover{background:rgba(128,128,128,.1);}
+
+/* FILTER PANEL */
+#filter-panel{display:none;width:100%;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:6px;margin-bottom:12px;}
+#filter-panel.open{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;}
+.filter-section{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.filter-label{font-size:9px;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-right:2px;}
+.svc-chip{display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:10px;font-family:inherit;cursor:pointer;transition:background .12s,color .12s,opacity .12s;letter-spacing:.03em;}
+.svc-chip:hover{background:rgba(128,128,128,.1);}
+.svc-chip.active{color:var(--text);border-color:var(--border2);}
+.svc-chip.inactive{opacity:.35;}
+.chip-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+#filter-reset{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:inherit;padding:3px 6px;letter-spacing:.04em;text-decoration:underline;margin-left:6px;}
+#filter-reset:hover{color:var(--text2);}
+.filter-sep{width:1px;height:18px;background:var(--border2);margin:0 4px;}
+
+/* VIEW MODE TOGGLE */
+#view-mode-wrap{display:flex;align-items:center;gap:4px;}
+.vm-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.06em;padding:4px 10px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s;}
+.vm-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);}
+.vm-btn.active{background:rgba(128,128,128,.14);color:var(--text);border-color:var(--border2);}
+
+/* COLLAPSE ALL btn */
+#collapse-all-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.06em;padding:4px 10px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s;}
+#collapse-all-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);}
+
+/* LIGHT MODE: label backgrounds + softer shadow */
+body.light-mode .row-label{background:var(--s1);box-shadow:6px 0 10px rgba(0,0,0,.10);}
+body.light-mode .svc-label{background:var(--s2);box-shadow:6px 0 10px rgba(0,0,0,.10);}
+body.light-mode .feed-label{background:var(--s3);box-shadow:6px 0 10px rgba(0,0,0,.10);}
+body.light-mode .time-axis-label{background:var(--s1);box-shadow:6px 0 10px rgba(0,0,0,.10);}
+body.light-mode .service-row{background:var(--s2);}
+body.light-mode .feed-row{background:var(--s3);}
+body.light-mode .timeline-container{background:var(--s1);}
+body.light-mode .gl{background:rgba(0,0,0,.06);}
+body.light-mode .tooltip{background:#fff;border-color:rgba(0,0,0,.15);box-shadow:0 4px 24px rgba(0,0,0,.15);}
+body.light-mode .tt-head{color:#1a1d2e;}
+body.light-mode .tt-k{color:#8a92b0;}
+body.light-mode .tt-v{color:#1a1d2e;}
+body.light-mode .tt-div{border-color:rgba(0,0,0,.1);}
+body.light-mode #now-label{background:rgba(20,25,45,.9);}
+body.light-mode .match-row:hover{background:rgba(0,0,0,.03);}
+body.light-mode .md1-group-header{background:rgba(0,0,0,.02);}
+body.light-mode .md1-group-header:hover{background:rgba(0,0,0,.04);}
+
+/* ── EXCEL LOAD OVERLAY ─────────────────────────────────────────── */
+#xl-overlay{position:fixed;inset:0;z-index:9900;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
+#xl-overlay.hidden{display:none;}
+.xl-card{background:var(--s1);border:1px solid var(--border2);border-radius:8px;padding:32px 36px;width:420px;max-width:95vw;}
+.xl-title{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.xl-sub{font-size:11px;color:var(--text3);margin-bottom:24px;line-height:1.5;}
+.xl-drop{border:1px dashed var(--border2);border-radius:6px;padding:18px 16px;margin-bottom:12px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center;position:relative;}
+.xl-drop:hover,.xl-drop.drag-over{border-color:var(--accent);background:rgba(200,168,75,.06);}
+.xl-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.xl-drop-label{font-size:11px;color:var(--text3);pointer-events:none;}
+.xl-drop-label strong{color:var(--text2);display:block;margin-bottom:3px;font-size:12px;}
+.xl-status{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:3px;margin-left:8px;}
+.xl-status.ok{background:rgba(93,212,160,.15);color:#5dd4a0;}
+.xl-status.err{background:rgba(255,100,100,.12);color:#ff8080;}
+.xl-btn{width:100%;margin-top:8px;padding:10px;background:rgba(200,168,75,.14);border:1px solid rgba(200,168,75,.4);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border-radius:4px;cursor:pointer;font-family:inherit;transition:background .15s;}
+.xl-btn:hover{background:rgba(200,168,75,.24);}
+.xl-btn:disabled{opacity:.35;cursor:not-allowed;}
+.xl-demo{width:100%;margin-top:6px;padding:7px;background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;}
+.xl-demo:hover{background:rgba(128,128,128,.08);color:var(--text2);}
+.xl-hint{font-size:10px;color:var(--text3);margin-top:14px;line-height:1.5;border-top:1px solid var(--border);padding-top:12px;}
+#xl-reload-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s;}
+#xl-reload-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);}
+</style>
+</head>
+<body>
+
+<!-- EXCEL LOAD OVERLAY -->
+<div id="xl-overlay" class="hidden">
+  <div class="xl-card">
+    <div class="xl-title">FWC26 — TX Schedule</div>
+    <div class="xl-sub">Load the schedule data file to begin. Drag &amp; drop or click to browse.</div>
+    <div class="xl-drop" id="xl-drop-main">
+      <input type="file" id="xl-file-main" accept=".xlsx,.xls" onchange="handleXlFile(this)">
+      <div class="xl-drop-label">
+        <strong>FWC26_TX_Input_v3.xlsx <span class="xl-status" id="xl-file-status"></span></strong>
+        Services · Feeds · Matches · Settings
+      </div>
+    </div>
+    <button class="xl-btn" id="xl-load-btn" disabled onclick="applyLoadedData()">Load Schedule</button>
+    <button class="xl-demo" onclick="useDemoData()">Use Demo Data (MD1–MD8)</button>
+    <div class="xl-hint">
+      File is processed locally in your browser — nothing is uploaded.<br>
+      Data is cached; reload the page to keep it without re-selecting the file.
+    </div>
+  </div>
+</div>
+
+<!-- STICKY NAV -->
+<div id="nav-bar">
+  <div class="nav-top">
+    <span class="nav-title">FWC26 — Transmission Schedule</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button id="xl-reload-btn" onclick="showXlOverlay()" title="Load or reload Excel data file">📁 Load Excel</button>
+      <button id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+      <span class="nav-meta"><strong>IBC Time (CDT):</strong> <span id="nav-clock">--:--:--</span></span>
+      <button id="live-btn" onclick="goLive()">⬤ LIVE NOW</button>
+    </div>
+  </div>
+  <div id="cal-strip"></div>
+</div>
+
+<div id="main">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+    <div class="legend" id="legend" style="margin-bottom:0;"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <!-- View mode -->
+      <span style="font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">View</span>
+      <div id="view-mode-wrap">
+        <button class="vm-btn active" data-vm="all"     onclick="setViewMode('all',this)">All</button>
+        <button class="vm-btn"        data-vm="svc"     onclick="setViewMode('svc',this)">Svc</button>
+        <button class="vm-btn"        data-vm="feed"    onclick="setViewMode('feed',this)">Feed</button>
+      </div>
+      <div style="width:1px;height:14px;background:var(--border2);margin:0 2px;"></div>
+      <!-- Zoom -->
+      <span style="font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Zoom</span>
+      <button class="zoom-btn active" id="zoom-1h"  onclick="setZoom('1h',this)">1h</button>
+      <button class="zoom-btn"        id="zoom-all" onclick="setZoom('all',this)">All</button>
+      <div style="width:1px;height:14px;background:var(--border2);margin:0 2px;"></div>
+      <!-- Collapse all -->
+      <button id="collapse-all-btn" onclick="collapseAll()">⊟ Collapse all</button>
+      <div style="width:1px;height:14px;background:var(--border2);margin:0 2px;"></div>
+      <!-- Filter -->
+      <button id="filter-toggle" class="zoom-btn" onclick="toggleFilterPanel(this)">⚙ Filter</button>
+    </div>
+  </div>
+  <div id="filter-panel"></div>
+  <div id="schedule"></div>
+  <footer>
+    <span>FWC26 Operations · IBC Broadcast Center · Offsets relative to KO (min) · Click match row to expand</span>
+    <span id="footer-ts"></span>
+  </footer>
+</div><!-- end #main -->
+
+<div id="scroll-mirror-wrap"><div id="scroll-mirror-inner"></div></div>
+<div class="tooltip" id="tooltip"></div>
+<div id="now-label"></div>
+
+<script>
+const GLOBAL_START_H=10, GLOBAL_END_H=24;
+
+// Max feed offsets across all services
+const MAX_EARLY_MIN=150; // earliest feed starts 150min before KO
+const MAX_LATE_MIN=65;   // latest feed ends 65min after KO
+
+function calcDayBounds(dayMatches, md1Matches){
+  let minH=99, maxH=0;
+  const allM=[...dayMatches,...md1Matches];
+  allM.forEach(m=>{
+    const earliest=m.koIBC - MAX_EARLY_MIN/60;
+    const latest  =m.koIBC + m.dur/60 + MAX_LATE_MIN/60;
+    if(earliest<minH) minH=earliest;
+    if(latest>maxH)   maxH=latest;
+  });
+  // Also factor MD-1 absolute times
+  md1Matches.forEach(m=>{
+    [m.trainA,m.pcA,m.trainB,m.pcB].forEach(t=>{
+      const h=parseIBCTime(t);
+      if(h!==null){
+        if(h<minH) minH=h;
+        if(h+1.5>maxH) maxH=h+1.5;
+      }
+    });
+  });
+  if(allM.length===0){ minH=GLOBAL_START_H; maxH=GLOBAL_END_H; }
+  // Floor to nearest 30min with 15min padding, cap end at 26 (allows post-midnight)
+  const startH=Math.max(0,   Math.floor((minH - 0.25) * 2) / 2);
+  const endH  =Math.min(26,  Math.ceil ((maxH + 0.25) * 2) / 2);
+  return {startH, endH, span:endH-startH};
+}
+
+function makePct(startH, span){ return h=>((h-startH)/span)*100; }
+function makeTicks(startH, endH){
+  const t=[];
+  const span=endH-startH;
+  const step=span>10?2:1;
+  const firstInt=Math.ceil(startH);
+  const first=step===2?(firstInt%2===0?firstInt:firstInt+1):firstInt;
+  for(let h=first;h<=endH;h+=step) t.push(h);
+  return t;
+}
+function tickLabel(h){ return String(Math.floor(h)%24).padStart(2,'0')+':00'; }
+
+function hhmm(h){
+  if(h<0){ return '-'+hhmm(-h); }
+  const hh=Math.floor(h), mm=Math.round((h-hh)*60);
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+
+const CH_COLORS={
+  'Match A':{ full:'#1a3a5c', svc:'#122840', feed:'#0d1e30', svcDim:'#1a3a5c99', feedDim:'#1a3a5c77', text:'#7dbfff', pip:'#7dbfff', ko:'rgba(125,191,255,0.45)' },
+  'Match B':{ full:'#0f3d2c', svc:'#0a2a1e', feed:'#071a12', svcDim:'#0f3d2c99', feedDim:'#0f3d2c77', text:'#5dd4a0', pip:'#5dd4a0', ko:'rgba(93,212,160,0.45)' },
+  'Match C':{ full:'#2e1f4a', svc:'#1e1432', feed:'#140d22', svcDim:'#2e1f4a99', feedDim:'#2e1f4a77', text:'#b89cff', pip:'#b89cff', ko:'rgba(184,156,255,0.45)' },
+  'Match D':{ full:'#3d1f10', svc:'#2a1408', feed:'#1a0d04', svcDim:'#3d1f1099', feedDim:'#3d1f1077', text:'#ff9e6a', pip:'#ff9e6a', ko:'rgba(255,158,106,0.45)' },
+};
+
+const DEMO_SERVICES=[
+  { id:'dcl',   name:'Digital Content Live',             start:-150, stop:65,
+    feeds:[
+      {name:'Team A',        start:-150, stop:65,  subtasks:[]},
+      {name:'Team B',        start:-150, stop:65,  subtasks:[]},
+      {name:'Fan & Reaction',start:-120, stop:60,  subtasks:[]},
+      {name:'WF',            start:-90,  stop:15,  subtasks:[]},
+      {name:'ESF',           start:-90,  stop:15,  subtasks:[]},
+      {name:'MD-1 PC',       individual:true,      subtasks:[]},
+      {name:'MD-1 Training', individual:true,      subtasks:[]},
+    ]},
+  { id:'dclap', name:'DCL AntiPiracy',                   start:-90,  stop:15,
+    feeds:[
+      {name:'ESF', start:-90, stop:15, subtasks:[]},
+      {name:'WF',  start:-90, stop:15, subtasks:[]},
+    ]},
+  { id:'fco',   name:'FCO',                              start:-45,  stop:15,
+    feeds:[
+      {name:'WF',  start:-90, stop:15, subtasks:[
+        {name:'Frontend Available to FIFA', offset:-15},
+        {name:'SRT stream available',       offset:-45},
+      ]},
+    ]},
+  { id:'ris',   name:'RIS',                              start:-45,  stop:60,
+    feeds:[
+      {name:'WF',            start:-90,  stop:15, subtasks:[
+        {name:'WebRTC available to MP\'s', offset:-15},
+        {name:'SRT available to MP\'s',   offset:-45},
+      ]},
+      {name:'Fan & Reaction',start:-120, stop:60, subtasks:[
+        {name:'WebRTC available to MP\'s', offset:-60},
+        {name:'SRT available to MP\'s',   offset:-45},
+      ]},
+    ]},
+  { id:'data',  name:'Datatainment',                     start:-45,  stop:15,
+    feeds:[
+      {name:'Datatainment',  start:-90,  stop:15, subtasks:[]},
+    ]},
+  { id:'mb',    name:'Match Buddy',                      start:-90,  stop:15,
+    feeds:[
+      {name:'MP UNI',             start:-60,  stop:15, subtasks:[]},
+      {name:'WF',                 start:-90,  stop:15, subtasks:[]},
+      {name:'ISO 9 Tactical Main',start:-60,  stop:20, subtasks:[]},
+      {name:'ISO 10 Player A',    start:-10,  stop:10, subtasks:[]},
+      {name:'ISO 11 Player B',    start:-10,  stop:10, subtasks:[]},
+      {name:'Fan & Reaction',     start:-120, stop:60, subtasks:[]},
+      {name:'Team A',             start:-150, stop:65, subtasks:[]},
+      {name:'Team B',             start:-150, stop:65, subtasks:[]},
+      {name:'ISO 1',              start:-30,  stop:20, subtasks:[]},
+      {name:'ISO 6 Cable Cam',    start:-70,  stop:20, subtasks:[]},
+    ]},
+  { id:'acc',   name:'Automated Content Creation (WSC)', start:-150, stop:65,
+    feeds:[
+      {name:'Team A',        start:-150, stop:65,  subtasks:[]},
+      {name:'Team B',        start:-150, stop:65,  subtasks:[]},
+      {name:'Fan & Reaction',start:-120, stop:60,  subtasks:[]},
+      {name:'WF',            start:-90,  stop:15,  subtasks:[]},
+      {name:'MD-1 PC',       individual:true,      subtasks:[]},
+      {name:'MD-1 Training', individual:true,      subtasks:[]},
+    ]},
+  { id:'cc',    name:'Closed Captions',                  start:-90,  stop:15,
+    feeds:[
+      {name:'WF',  start:-90, stop:15, subtasks:[]},
+    ]},
+];
+
+const DEMO_MATCHES=[
+  // MD1 — 11 Jun
+  {m:1, md:1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match A',teamA:'MEX',teamB:'RSA',fullA:'Mexico',fullB:'South Africa',koIBC:14,city:'Mexico City',localKO:'13:00',utcKO:'19:00',tz:'UTC-6',dur:105,trainA:'12:00 IBC',pcA:'15:30 IBC',trainB:'18:00 IBC',pcB:'16:30 IBC'},
+  {m:2, md:1,date:'2026-06-11',dateLabel:'11 June 2026',ch:'Match B',teamA:'KOR',teamB:'CZE',fullA:'Korea Republic',fullB:'Czechia',koIBC:21,city:'Guadalajara',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'17:30 IBC',pcA:'15:30 IBC',trainB:'18:45 IBC',pcB:'16:30 IBC'},
+  // MD2 — 12 Jun
+  {m:3, md:2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match A',teamA:'CAN',teamB:'BIH',fullA:'Canada',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Toronto',localKO:'15:00',utcKO:'19:00',tz:'UTC-4',dur:105,trainA:'14:00 IBC',pcA:'18:45 IBC',trainB:'10:00 IBC',pcB:'17:45 IBC'},
+  {m:4, md:2,date:'2026-06-12',dateLabel:'12 June 2026',ch:'Match B',teamA:'USA',teamB:'PAR',fullA:'United States',fullB:'Paraguay',koIBC:20,city:'Los Angeles',localKO:'18:00',utcKO:'01:00+1',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'17:45 IBC',trainB:'11:00 IBC',pcB:'20:45 IBC'},
+  // MD3 — 13 Jun
+  {m:5, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match C',teamA:'HAI',teamB:'SCO',fullA:'Haiti',fullB:'Scotland',koIBC:20,city:'Boston, MA',localKO:'21:00',utcKO:'01:00+1',tz:'UTC-4',dur:105,trainA:'17:00 IBC',pcA:'16:00 IBC',trainB:'09:00 IBC',pcB:'10:30 IBC'},
+  {m:6, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match D',teamA:'AUS',teamB:'TUR',fullA:'Australia',fullB:'Türkiye',koIBC:23,city:'Vancouver',localKO:'21:00',utcKO:'04:00+1',tz:'UTC-7',dur:105,trainA:'21:00 IBC',pcA:'19:45 IBC',trainB:'17:00 IBC',pcB:'20:30 IBC'},
+  {m:7, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match B',teamA:'BRA',teamB:'MAR',fullA:'Brazil',fullB:'Morocco',koIBC:17,city:'New York, NJ',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'17:00 IBC',pcB:'14:30 IBC'},
+  {m:8, md:3,date:'2026-06-13',dateLabel:'13 June 2026',ch:'Match A',teamA:'QAT',teamB:'SUI',fullA:'Qatar',fullB:'Switzerland',koIBC:14,city:'San Francisco, CA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'12:00 IBC',pcA:'17:45 IBC',trainB:'12:15 IBC',pcB:'20:45 IBC'},
+  // MD4 — 14 Jun
+  {m:9, md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match C',teamA:'CIV',teamB:'ECU',fullA:"Côte d'Ivoire",fullB:'Ecuador',koIBC:18,city:'Philadelphia, PA',localKO:'19:00',utcKO:'23:00',tz:'UTC-4',dur:105,trainA:'16:00 IBC',pcA:'14:45 IBC',trainB:'08:00 IBC',pcB:'17:45 IBC'},
+  {m:10,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match A',teamA:'GER',teamB:'CUW',fullA:'Germany',fullB:'Curaçao',koIBC:12,city:'Houston, TX',localKO:'12:00',utcKO:'17:00',tz:'UTC-5',dur:105,trainA:'10:00 IBC',pcA:'18:45 IBC',trainB:'09:00 IBC',pcB:'19:45 IBC'},
+  {m:11,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match B',teamA:'NED',teamB:'JPN',fullA:'Netherlands',fullB:'Japan',koIBC:15,city:'Dallas, TX',localKO:'15:00',utcKO:'20:00',tz:'UTC-5',dur:105,trainA:'10:30 IBC',pcA:'18:45 IBC',trainB:'10:00 IBC',pcB:'15:45 IBC'},
+  {m:12,md:4,date:'2026-06-14',dateLabel:'14 June 2026',ch:'Match D',teamA:'SWE',teamB:'TUN',fullA:'Sweden',fullB:'Tunisia',koIBC:21,city:'Monterrey',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'21:00 IBC',pcB:'16:45 IBC'},
+  // MD5 — 15 Jun
+  {m:13,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match C',teamA:'KSA',teamB:'URU',fullA:'Saudi Arabia',fullB:'Uruguay',koIBC:17,city:'Miami, FL',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'17:00 IBC',pcA:'14:45 IBC',trainB:'09:00 IBC',pcB:'17:45 IBC'},
+  {m:14,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match A',teamA:'ESP',teamB:'CPV',fullA:'Spain',fullB:'Cabo Verde',koIBC:11,city:'Atlanta, GA',localKO:'12:00',utcKO:'16:00',tz:'UTC-4',dur:105,trainA:'09:30 IBC',pcA:'14:45 IBC',trainB:'13:00 IBC',pcB:'17:45 IBC'},
+  {m:15,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match D',teamA:'IRN',teamB:'NZL',fullA:'IR Iran',fullB:'New Zealand',koIBC:20,city:'Los Angeles, CA',localKO:'18:00',utcKO:'01:00+1',tz:'UTC-7',dur:105,trainA:'19:30 IBC',pcA:'17:45 IBC',trainB:'12:45 IBC',pcB:'20:45 IBC'},
+  {m:16,md:5,date:'2026-06-15',dateLabel:'15 June 2026',ch:'Match B',teamA:'BEL',teamB:'EGY',fullA:'Belgium',fullB:'Egypt',koIBC:14,city:'Seattle, WA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'16:30 IBC',trainB:'12:00 IBC',pcB:'17:30 IBC'},
+  // MD6 — 16 Jun
+  {m:17,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match A',teamA:'FRA',teamB:'SEN',fullA:'France',fullB:'Senegal',koIBC:14,city:'New York, NJ',localKO:'15:00',utcKO:'19:00',tz:'UTC-4',dur:105,trainA:'15:00 IBC',pcA:'09:30 IBC',trainB:'16:00 IBC',pcB:'13:30 IBC'},
+  {m:18,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match B',teamA:'IRQ',teamB:'NOR',fullA:'Iraq',fullB:'Norway',koIBC:17,city:'Boston, MA',localKO:'18:00',utcKO:'22:00',tz:'UTC-4',dur:105,trainA:'17:30 IBC',pcA:'19:00 IBC',trainB:'14:30 IBC',pcB:'16:00 IBC'},
+  {m:19,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match C',teamA:'ARG',teamB:'ALG',fullA:'Argentina',fullB:'Algeria',koIBC:20,city:'Kansas City, MO',localKO:'20:00',utcKO:'01:00+1',tz:'UTC-5',dur:105,trainA:'18:00 IBC',pcA:'14:30 IBC',trainB:'20:00 IBC',pcB:'15:30 IBC'},
+  {m:20,md:6,date:'2026-06-16',dateLabel:'16 June 2026',ch:'Match D',teamA:'AUT',teamB:'JOR',fullA:'Austria',fullB:'Jordan',koIBC:23,city:'San Francisco, CA',localKO:'21:00',utcKO:'04:00+1',tz:'UTC-7',dur:105,trainA:'13:00 IBC',pcA:'20:45 IBC',trainB:'22:00 IBC',pcB:'17:45 IBC'},
+  // MD7 — 17 Jun
+  {m:21,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match C',teamA:'GHA',teamB:'PAN',fullA:'Ghana',fullB:'Panama',koIBC:18,city:'Toronto',localKO:'19:00',utcKO:'23:00',tz:'UTC-4',dur:105,trainA:'18:00 IBC',pcA:'13:30 IBC',trainB:'08:00 IBC',pcB:'14:30 IBC'},
+  {m:22,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match B',teamA:'ENG',teamB:'CRO',fullA:'England',fullB:'Croatia',koIBC:15,city:'Dallas, TX',localKO:'15:00',utcKO:'20:00',tz:'UTC-5',dur:105,trainA:'11:00 IBC',pcA:'18:45 IBC',trainB:'15:00 IBC',pcB:'19:45 IBC'},
+  {m:23,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match A',teamA:'POR',teamB:'COD',fullA:'Portugal',fullB:'Congo DR',koIBC:12,city:'Houston, TX',localKO:'12:00',utcKO:'17:00',tz:'UTC-5',dur:105,trainA:'09:30 IBC',pcA:'18:45 IBC',trainB:'13:00 IBC',pcB:'15:45 IBC'},
+  {m:24,md:7,date:'2026-06-17',dateLabel:'17 June 2026',ch:'Match D',teamA:'UZB',teamB:'COL',fullA:'Uzbekistan',fullB:'Colombia',koIBC:21,city:'Mexico City',localKO:'20:00',utcKO:'02:00+1',tz:'UTC-6',dur:105,trainA:'09:30 IBC',pcA:'19:45 IBC',trainB:'18:30 IBC',pcB:'16:45 IBC'},
+  // MD8 — 18 Jun
+  {m:25,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match A',teamA:'CZE',teamB:'RSA',fullA:'Czechia',fullB:'South Africa',koIBC:11,city:'Atlanta, GA',localKO:'12:00',utcKO:'16:00',tz:'UTC-4',dur:105,trainA:'09:00 IBC',pcA:'13:30 IBC',trainB:'16:00 IBC',pcB:'14:30 IBC'},
+  {m:26,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match B',teamA:'SUI',teamB:'BIH',fullA:'Switzerland',fullB:'Bosnia and Herzegovina',koIBC:14,city:'Los Angeles, CA',localKO:'12:00',utcKO:'19:00',tz:'UTC-7',dur:105,trainA:'12:45 IBC',pcA:'20:45 IBC',trainB:'11:00 IBC',pcB:'21:45 IBC'},
+  {m:27,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match C',teamA:'CAN',teamB:'QAT',fullA:'Canada',fullB:'Qatar',koIBC:17,city:'Vancouver',localKO:'15:00',utcKO:'22:00',tz:'UTC-7',dur:105,trainA:'17:00 IBC',pcA:'20:45 IBC',trainB:'13:00 IBC',pcB:'17:30 IBC'},
+  {m:28,md:8,date:'2026-06-18',dateLabel:'18 June 2026',ch:'Match D',teamA:'MEX',teamB:'KOR',fullA:'Mexico',fullB:'Korea Republic',koIBC:20,city:'Guadalajara',localKO:'19:00',utcKO:'01:00+1',tz:'UTC-6',dur:105,trainA:'19:00 IBC',pcA:'15:30 IBC',trainB:'17:30 IBC',pcB:'16:30 IBC'},
+];
+
+// ── Active data — loaded from Excel (localStorage) or demo fallback ──────────
+function _tryParseLS(key){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):null; }catch(e){ return null; } }
+let SERVICES = _tryParseLS('fwc26_services') || DEMO_SERVICES;
+let matches   = _tryParseLS('fwc26_matches')  || DEMO_MATCHES;
+
+// Match dates set for quick lookup
+const matchDateSet=new Set(matches.map(m=>m.date));
+
+// ── CALENDAR STRIP ──────────────────────────────────────────────
+const calStrip=document.getElementById('cal-strip');
+const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+// Build dates using local-time year/month/day to avoid UTC midnight offset bug
+function makeLocalDate(y,m,d){ return new Date(y,m-1,d); }
+function localDateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+const tourStart=makeLocalDate(2026,6,10);
+const tourEnd  =makeLocalDate(2026,7,19);
+let selectedDate=null;
+
+// (md1OnlyDateSet defined after prevDateKey below)
+
+function getIBCDateKey(){
+  const d=new Date();
+  const ibcMs=d.getTime()-5*3600000;
+  const ibcDate=new Date(ibcMs);
+  return ibcDate.getUTCFullYear()+'-'+String(ibcDate.getUTCMonth()+1).padStart(2,'0')+'-'+String(ibcDate.getUTCDate()).padStart(2,'0');
+}
+
+for(let d=new Date(tourStart);d<=tourEnd;d.setDate(d.getDate()+1)){
+  const key=localDateKey(d);
+  const hasMatch=matchDateSet.has(key);
+  const isToday=key===getIBCDateKey();
+  const el=document.createElement('div');
+  el.className='cal-day'+(hasMatch?' has-matches':'')+(isToday?' today':'');
+  el.dataset.date=key;
+  el.innerHTML=`<span class="cal-dw">${DAYS[d.getDay()]}</span><span class="cal-dn">${d.getDate()}</span><span class="cal-mo">${MONTHS[d.getMonth()]}</span><div class="cal-dot"></div>`;
+  el.addEventListener('click',()=>selectDay(key,el));
+  calStrip.appendChild(el);
+}
+
+function selectDay(key, el){
+  document.querySelectorAll('.cal-day').forEach(c=>c.classList.remove('selected'));
+  if(selectedDate===key){
+    // Toggle off — go to live now
+    selectedDate=null;
+    goLive();
+  } else {
+    selectedDate=key;
+    el.classList.add('selected');
+    showDay(key);
+  }
+}
+
+function showAllDays(){
+  document.querySelectorAll('.day-section').forEach(s=>{s.style.display='';});
+  setNowLineVisible(true);
+  setTimeout(applyZoom,0);
+}
+
+function showDay(key){
+  document.querySelectorAll('.day-section').forEach(s=>{
+    s.style.display = s.dataset.date===key ? '' : 'none';
+  });
+  setNowLineVisible(false);
+  setTimeout(applyZoom,0);
+}
+
+function setNowLineVisible(v){
+  document.querySelectorAll('.now-line').forEach(el=>{el.style.opacity=v?'0.6':'0';});
+  const lbl=document.getElementById('now-label');
+  if(lbl) lbl.style.display=v?'block':'none';
+  nowVisible=v;
+}
+
+let nowVisible=true;
+
+// ── LIVE NOW button ─────────────────────────────────────────────
+function goLive(){
+  const todayKey=getIBCDateKey();
+  // If today has no matches, fall back to the nearest match day
+  const allDates=[...document.querySelectorAll('.day-section')].map(s=>s.dataset.date).sort();
+  const targetKey=allDates.includes(todayKey) ? todayKey : allDates[0];
+
+  // Select in calendar strip
+  document.querySelectorAll('.cal-day').forEach(c=>c.classList.remove('selected'));
+  const targetCalEl=calStrip.querySelector(`[data-date="${targetKey}"]`);
+  if(targetCalEl){ targetCalEl.classList.add('selected'); targetCalEl.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
+  selectedDate=targetKey;
+
+  // Show only target day, enable now line
+  document.querySelectorAll('.day-section').forEach(s=>{
+    s.style.display = s.dataset.date===targetKey ? '' : 'none';
+  });
+  setNowLineVisible(targetKey===todayKey);
+
+  // Scroll to axis line — center current time in 1h mode
+  const axisEl=document.getElementById('now-axis-'+targetKey);
+  if(axisEl) setTimeout(()=>{
+    if(currentZoom==='1h'){
+      const tc=axisEl.closest('.timeline-container');
+      const sec=axisEl.closest('.day-section');
+      if(tc&&sec){
+        const sH=parseFloat(sec.dataset.startH)||0;
+        const sp=parseFloat(sec.dataset.span)||14;
+        const d=new Date();
+        const totalSec=d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()-5*3600;
+        const normSec=((totalSec%86400)+86400)%86400;
+        const ibcH=normSec/3600;
+        const visibleW=tc.clientWidth-240;
+        const pxh=Math.max(60, Math.round(visibleW/2));
+        const scrollX=Math.max(0, Math.round((ibcH-sH)*pxh - visibleW/2));
+        tc.scrollLeft=scrollX;
+        setTimeout(updateMirror,50);
+        if(typeof applyLabelSticky==='function') applyLabelSticky(tc);
+      }
+    } else {
+      axisEl.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },80);
+
+  // Pulse button
+  const btn=document.getElementById('live-btn');
+  btn.classList.add('active');
+  setTimeout(()=>btn.classList.remove('active'),1200);
+}
+
+// ── LEGEND ──────────────────────────────────────────────────────
+const legendEl=document.getElementById('legend');
+Object.entries(CH_COLORS).forEach(([ch,c])=>{
+  const used=matches.some(m=>m.ch===ch);
+  if(!used) return;
+  legendEl.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:6px;font-size:10px;color:${c.text};letter-spacing:.04em;"><div style="display:flex;width:36px;height:8px;border-radius:2px;overflow:hidden;"><span style="flex:1;background:${c.full};"></span><span style="flex:1;background:${c.svc};"></span><span style="flex:1;background:${c.feed};"></span></div>${ch}</div>`);
+});
+legendEl.insertAdjacentHTML('beforeend',`<span style="width:1px;height:12px;background:rgba(255,255,255,.1);margin:0 4px;"></span><span style="font-size:10px;color:var(--text3);">▶ click match to expand &nbsp;·&nbsp; swatch: match / service / feed</span>`);
+
+// ── BUILD SCHEDULE ───────────────────────────────────────────────
+// gridOverlay and ticks are now computed per day inside the builder
+
+// Helper: parse "HH:MM IBC" string to decimal hours
+function parseIBCTime(s){
+  if(!s) return null;
+  const m=s.match(/(\d+):(\d+)/);
+  if(!m) return null;
+  return parseInt(m[1])+parseInt(m[2])/60;
+}
+
+// Helper: local dateKey from date string
+function localKeyFromStr(str){
+  const p=str.split('-');
+  return str; // already YYYY-MM-DD
+}
+
+// Helper: subtract 1 day from YYYY-MM-DD string
+function prevDateKey(str){
+  const p=str.split('-');
+  const d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// MD-1 only dates: day before a match that isn't itself a match day
+const md1OnlyDateSet=new Set(
+  matches.map(m=>prevDateKey(m.date)).filter(d=>!matchDateSet.has(d))
+);
+
+// Backfill has-md1 class on already-rendered calendar days
+document.querySelectorAll('.cal-day').forEach(el=>{
+  if(md1OnlyDateSet.has(el.dataset.date)) el.classList.add('has-md1');
+});
+function prevDateLabel(str){
+  const p=str.split('-');
+  const d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  d.setDate(d.getDate()-1);
+  return d.getDate()+' '+['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()]+' '+d.getFullYear();
+}
+
+// Build a map of all dates that need sections: match dates + MD-1 dates
+const allDatesMap=new Map(); // key → {date, label, md, isMatchDay}
+
+matches.forEach(m=>{
+  if(!allDatesMap.has(m.date)) allDatesMap.set(m.date,{date:m.date,label:m.dateLabel,md:m.md,isMatchDay:true});
+  const prev=prevDateKey(m.date);
+  if(!allDatesMap.has(prev)) allDatesMap.set(prev,{date:prev,label:prevDateLabel(m.date),md:null,isMatchDay:false});
+});
+
+// Sort chronologically
+const allDays=[...allDatesMap.values()].sort((a,b)=>a.date.localeCompare(b.date));
+
+const schedEl=document.getElementById('schedule');
+
+// MD-1 activity block duration estimate: 90 min for training, 45 min for PC
+const MD1_TRAIN_DUR=90/60;
+const MD1_PC_DUR=45/60;
+
+const CH_ORDER={'Match A':0,'Match B':1,'Match C':2,'Match D':3,'Match E':4,'Match F':5};
+function sortByChannel(arr){ return [...arr].sort((a,b)=>(CH_ORDER[a.ch]??9)-(CH_ORDER[b.ch]??9)); }
+
+allDays.forEach(day=>{
+  const dm=sortByChannel(matches.filter(m=>m.date===day.date));
+  const md1Matches=sortByChannel(matches.filter(m=>prevDateKey(m.date)===day.date));
+
+  // ── Per-day dynamic timeline bounds ──
+  const {startH:S, endH:E, span:SP}=calcDayBounds(dm, md1Matches);
+  const pct=makePct(S,SP);
+  const ticks=makeTicks(S,E);
+  function gridOverlay(){ return ticks.map(h=>`<div class="gl" style="left:${pct(h).toFixed(2)}%"></div>`).join('')+'<div class="now-line" style="left:-9999px;"></div>'; }
+
+  const sec=document.createElement('div');
+  sec.className='day-section';
+  sec.dataset.date=day.date;
+  let matchRows='';
+
+  // ── Regular match rows ──
+  dm.forEach(match=>{
+    const c=CH_COLORS[match.ch]||CH_COLORS['Match A'];
+    const koH=match.koIBC;
+    const endH=koH+match.dur/60;
+    const koL=pct(koH).toFixed(2);
+    const mL=pct(koH).toFixed(2);
+    const mW=(pct(endH)-pct(koH)).toFixed(2);
+
+    let servicesHtml='';
+    SERVICES.forEach(svc=>{
+      const svStartH=koH+svc.start/60, svEndH=koH+svc.stop/60;
+      const svL=pct(svStartH).toFixed(2), svW=(pct(svEndH)-pct(svStartH)).toFixed(2);
+      const svStartLabel=hhmm(svStartH), svEndLabel=hhmm(svEndH);
+      let feedsHtml='';
+      svc.feeds.forEach(f=>{
+        // P2: skip feeds not yet active for this match date
+        if(f.activeFrom){const[dd,mm,yyyy]=f.activeFrom.split('/');if(match.date<`${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`) return;}
+        if(f.individual){
+          feedsHtml+=`<div class="feed-row" data-feed="${f.name}" data-individual="1" data-ch="${match.ch}"><div class="feed-label" style="background:${c.feed};"><div class="feed-pip" style="background:${c.pip};"></div><span class="feed-name">${f.name}</span></div><div class="feed-track" style="background:${c.feed};"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><span class="indiv-label" style="left:${koL}%">→ see MD-1 day</span></div></div>`;
+        } else {
+          const fSH=koH+f.start/60, fEH=koH+f.stop/60;
+          const fL=pct(fSH).toFixed(2), fW=(pct(fEH)-pct(fSH)).toFixed(2);
+          const fOffStart=(f.start>0?'+':'')+f.start+'min';
+          const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min';
+          // Service window inner block
+          const innerStartH = Math.max(fSH, svStartH);
+          const innerEndH   = Math.min(fEH, svEndH);
+          let innerBlockHtml = '';
+          if(innerEndH > innerStartH){
+            const feedSpan = fEH - fSH;
+            const innerL = ((innerStartH - fSH) / feedSpan * 100).toFixed(2);
+            const innerW = ((innerEndH - innerStartH) / feedSpan * 100).toFixed(2);
+            const svcStartLabel = hhmm(svStartH);
+            // Label is a child of the inner block itself, always at left:4px
+            innerBlockHtml =
+              `<div class="svc-inner-block" style="position:absolute;top:3px;bottom:3px;left:${innerL}%;width:${innerW}%;background:${c.pip};opacity:.22;border-radius:2px;pointer-events:none;overflow:visible;">` +
+              `<span style="position:absolute;top:50%;transform:translateY(-50%);left:4px;font-size:8px;font-weight:600;color:${c.pip};white-space:nowrap;opacity:5;letter-spacing:.03em;">${svcStartLabel}</span>` +
+              `</div>`;
+          }
+
+          // Subtask markers
+          let subtaskHtml='';
+          if(f.subtasks && f.subtasks.length){
+            const feedSpan=fEH-fSH;
+            f.subtasks.forEach(st=>{
+              const stH=koH+st.offset/60;
+              // Show marker if within the feed TX window
+              if(stH<fSH||stH>fEH) return;
+              const stL=((stH-fSH)/feedSpan*100).toFixed(2);
+              subtaskHtml+=`<div class="subtask-marker" data-label="${st.name} (KO${st.offset>0?'+':''}${st.offset}min)" data-ibc="${hhmm(stH)}" style="left:${stL}%;background:${c.pip};"></div>`;
+            });
+          }
+          feedsHtml+=`<div class="feed-row"
+            data-feed="${f.name}"
+            data-feed-start="${hhmm(fSH)}"
+            data-feed-end="${hhmm(fEH)}"
+            data-feed-off-start="${fOffStart}"
+            data-feed-off-end="${fOffEnd}"
+            data-svc-start="${svStartLabel}"
+            data-svc-end="${svEndLabel}"
+            data-svc-off-start="${svc.start>0?'+'+svc.start:svc.start}min"
+            data-svc-off-end="${svc.stop>0?'+'+svc.stop:svc.stop}min"
+            data-svc-name="${svc.name}"
+            data-ch="${match.ch}">
+            <div class="feed-label" style="background:${c.feed};"><div class="feed-pip" style="background:${c.pip};"></div><span class="feed-name">${f.name}</span></div>
+            <div class="feed-track" style="background:${c.feed};"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};position:relative;">${innerBlockHtml}${subtaskHtml}<span class="feed-block-label" style="color:rgba(255,255,255,.5);position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:8px;">${f.name}</span></div></div>
+          </div>`;
+        }
+      });
+      const svcId=`svc-${match.m}-${svc.id}`;
+      servicesHtml+=`
+        <div class="svc-group">
+          <div class="service-row" onclick="toggleSvc(this)"
+            data-svc="${svc.name}" data-start="${svStartLabel}" data-end="${svEndLabel}"
+            data-offset-start="${svc.start>0?'+'+svc.start:svc.start}min"
+            data-offset-end="${svc.stop>0?'+'+svc.stop:svc.stop}min"
+            data-ch="${match.ch}" data-body="${svcId}">
+            <div class="svc-label" style="background:${c.svc};">
+              <span class="svc-arrow" style="font-size:9px;color:${c.pip};transition:transform .15s;flex-shrink:0;">▶</span>
+              <div class="svc-pip" style="background:${c.pip};"></div>
+              <span class="svc-name" style="color:${c.text};">${svc.name}</span>
+            </div>
+            <div class="svc-track" style="background:${c.svc};">
+              <div class="grid-overlay">${gridOverlay()}</div>
+              <div class="ko-line" style="left:${koL}%;background:${c.ko};"></div>
+              <div class="svc-block" style="left:${svL}%;width:${svW}%;background:${c.full};">
+                <span class="svc-block-label" style="color:#fff;">${svc.name}</span>
+              </div>
+            </div>
+          </div>
+          <div class="svc-feeds-body" id="${svcId}" style="display:none;">${feedsHtml}</div>
+        </div>`;
+    });
+
+    const koParts=match.date.split('-');
+    const koDate=new Date(parseInt(koParts[0]),parseInt(koParts[1])-1,parseInt(koParts[2]));
+    koDate.setDate(koDate.getDate()-1);
+    const md1Label=koDate.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][koDate.getMonth()];
+
+    // ── Build deduped feed panel ──
+    // Collect unique feeds by name, keeping first occurrence's TX start/stop
+    const feedMap=new Map();
+    SERVICES.forEach(svc=>{
+      svc.feeds.forEach(f=>{
+        if(f.individual) return; // MD-1 feeds not included
+        // P2: skip feeds not yet active for this match date
+        if(f.activeFrom){const[dd,mm,yyyy]=f.activeFrom.split('/');if(match.date<`${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`) return;}
+        if(!feedMap.has(f.name)){
+          feedMap.set(f.name,{name:f.name, start:f.start, stop:f.stop, subtasks:f.subtasks||[]});
+        }
+      });
+    });
+    // Sort by TX start (earliest first)
+    const uniqueFeeds=[...feedMap.values()].sort((a,b)=>a.start-b.start);
+
+    let dedupFeedsHtml='';
+    uniqueFeeds.forEach(f=>{
+      const fSH=koH+f.start/60, fEH=koH+f.stop/60;
+      const fL=pct(fSH).toFixed(2), fW=(pct(fEH)-pct(fSH)).toFixed(2);
+      const fOffStart=(f.start>0?'+':'')+f.start+'min';
+      const fOffEnd  =(f.stop>0?'+':'')+f.stop+'min';
+      // Subtask markers
+      let stHtml='';
+      if(f.subtasks.length){
+        const feedSpan=fEH-fSH;
+        f.subtasks.forEach(st=>{
+          const stH=koH+st.offset/60;
+          if(stH<fSH||stH>fEH) return;
+          const stL=((stH-fSH)/feedSpan*100).toFixed(2);
+          stHtml+=`<div class="subtask-marker" data-label="${st.name} (KO${st.offset>0?'+':''}${st.offset}min)" data-ibc="${hhmm(stH)}" style="left:${stL}%;background:${c.pip};"></div>`;
+        });
+      }
+      dedupFeedsHtml+=`<div class="feed-row"
+        data-feed="${f.name}"
+        data-feed-start="${hhmm(fSH)}"
+        data-feed-end="${hhmm(fEH)}"
+        data-feed-off-start="${fOffStart}"
+        data-feed-off-end="${fOffEnd}"
+        data-svc-start="—" data-svc-end="—"
+        data-svc-off-start="—" data-svc-off-end="—"
+        data-svc-name="—"
+        data-ch="${match.ch}">
+        <div class="feed-label" style="background:${c.feed};">
+          <div class="feed-pip" style="background:${c.pip};"></div>
+          <span class="feed-name">${f.name}</span>
+        </div>
+        <div class="feed-track" style="background:${c.feed};">
+          <div class="grid-overlay">${gridOverlay()}</div>
+          <div class="ko-line" style="left:${koL}%;background:${c.ko};"></div>
+          <div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};position:relative;">${stHtml}
+            <span class="feed-block-label" style="color:rgba(255,255,255,.6);position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:9px;">${hhmm(fSH)}</span>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    matchRows+=`<div class="match-group"><div class="match-row" onclick="toggleMatch(this)" data-teams="${match.fullA} vs ${match.fullB}" data-ch="${match.ch}" data-city="${match.city}" data-ko="${hhmm(koH)}" data-end="${hhmm(endH)}" data-local="${match.localKO}" data-utc="${match.utcKO}" data-tz="${match.tz}" data-train-a="${match.trainA}" data-pc-a="${match.pcA}" data-train-b="${match.trainB}" data-pc-b="${match.pcB}" data-team-a="${match.teamA}" data-team-b="${match.teamB}" data-md1="${md1Label}"><div class="row-label" style="border-left:3px solid ${c.pip};"><span class="toggle-arrow" style="color:${c.pip};">▶</span><span class="match-id">M${match.m}</span><span class="match-teams">${match.teamA} vs ${match.teamB}</span><span class="match-ch" style="color:${c.pip};">${match.ch}</span></div><div class="track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="match-block" style="left:${mL}%;width:${mW}%;background:${c.full};"><span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span><span class="block-ko" style="color:${c.text};">${hhmm(koH)}</span></div></div></div><div class="services-panel">${servicesHtml}</div><div class="feeds-panel" style="display:none;">${dedupFeedsHtml}</div></div>`;
+  });
+
+  // ── MD-1 channel rows (same structure as match rows) ──
+  if(md1Matches.length>0){
+    md1Matches.forEach(match=>{
+      const c=CH_COLORS[match.ch]||CH_COLORS['Match A'];
+      const nextDayLabel=match.dateLabel;
+      const md1Ch='MD-1 '+match.ch.replace('Match ','');
+
+      // The four absolute-time feeds
+      const trainAH=parseIBCTime(match.trainA);
+      const pcAH   =parseIBCTime(match.pcA);
+      const trainBH=parseIBCTime(match.trainB);
+      const pcBH   =parseIBCTime(match.pcB);
+
+      const feedTimes=[trainAH,pcAH,trainBH,pcBH].filter(h=>h!==null);
+      if(!feedTimes.length) return;
+
+      // MD-1 channel block spans from earliest feed to latest feed end
+      const md1StartH=Math.min(...feedTimes);
+      const md1EndH  =Math.max(
+        trainAH!==null?trainAH+MD1_TRAIN_DUR:0,
+        pcAH   !==null?pcAH   +MD1_PC_DUR  :0,
+        trainBH!==null?trainBH+MD1_TRAIN_DUR:0,
+        pcBH   !==null?pcBH   +MD1_PC_DUR  :0
+      );
+      const md1L=pct(md1StartH).toFixed(2);
+      const md1W=(pct(md1EndH)-pct(md1StartH)).toFixed(2);
+
+      // DCL and ACC services for MD-1: start = earliest feed, end = latest feed end
+      const MD1_SERVICES=[
+        {id:'dcl-md1', name:'Digital Content Live'},
+        {id:'acc-md1', name:'Automated Content Creation (WSC)'},
+      ];
+
+      const md1Feeds=[
+        {name:`${match.teamA} Training`, startH:trainAH, dur:MD1_TRAIN_DUR},
+        {name:`${match.teamA} PC`,       startH:pcAH,    dur:MD1_PC_DUR},
+        {name:`${match.teamB} Training`, startH:trainBH, dur:MD1_TRAIN_DUR},
+        {name:`${match.teamB} PC`,       startH:pcBH,    dur:MD1_PC_DUR},
+      ].filter(f=>f.startH!==null);
+
+      let md1ServicesHtml='';
+      MD1_SERVICES.forEach(svc=>{
+        const svcBodyId=`md1svc-${match.m}-${svc.id}`;
+
+        let feedsHtml='';
+        md1Feeds.forEach(f=>{
+          const fL=pct(f.startH).toFixed(2);
+          const fW=(pct(f.startH+f.dur)-pct(f.startH)).toFixed(2);
+          const fEnd=hhmm(f.startH+f.dur);
+          const fStart=hhmm(f.startH);
+          feedsHtml+=`<div class="feed-row"
+            data-feed="${f.name}"
+            data-feed-start="${fStart}"
+            data-feed-end="${fEnd}"
+            data-feed-off-start="—"
+            data-feed-off-end="—"
+            data-svc-start="${hhmm(md1StartH)}"
+            data-svc-end="${hhmm(md1EndH)}"
+            data-svc-off-start="—"
+            data-svc-off-end="—"
+            data-svc-name="${svc.name}"
+            data-ch="${match.ch}">
+            <div class="feed-label" style="background:${c.feed};">
+              <div class="feed-pip" style="background:${c.pip};"></div>
+              <span class="feed-name">${f.name}</span>
+            </div>
+            <div class="feed-track" style="background:${c.feed};">
+              <div class="grid-overlay">${gridOverlay()}</div>
+              <div class="feed-block" style="position:relative;left:${fL}%;width:${fW}%;background:${c.full};">
+                <span class="feed-block-label" style="color:#fff;">${f.name} · ${fStart}</span>
+              </div>
+            </div>
+          </div>`;
+        });
+
+        md1ServicesHtml+=`
+          <div class="svc-group">
+            <div class="service-row" onclick="toggleSvc(this)"
+              data-svc="${svc.name}"
+              data-start="${hhmm(md1StartH)}" data-end="${hhmm(md1EndH)}"
+              data-offset-start="—" data-offset-end="—"
+              data-ch="${match.ch}" data-body="${svcBodyId}">
+              <div class="svc-label" style="background:${c.svc};">
+                <span class="svc-arrow" style="font-size:9px;color:${c.pip};transition:transform .15s;flex-shrink:0;">▶</span>
+                <div class="svc-pip" style="background:${c.pip};"></div>
+                <span class="svc-name" style="color:${c.text};">${svc.name}</span>
+              </div>
+              <div class="svc-track" style="background:${c.svc};">
+                <div class="grid-overlay">${gridOverlay()}</div>
+                <div class="svc-block" style="left:${md1L}%;width:${md1W}%;background:${c.full};">
+                  <span class="svc-block-label" style="color:#fff;">${svc.name}</span>
+                </div>
+              </div>
+            </div>
+            <div class="svc-feeds-body" id="${svcBodyId}" style="display:none;">${feedsHtml}</div>
+          </div>`;
+      });
+
+      // Build MD-1 deduped feed panel — one row per TX chain (Training / PC)
+      // Each chain spans earliest→latest team event, with subtask markers per team
+      const koParts2=match.date.split('-');
+      const koDate2=new Date(parseInt(koParts2[0]),parseInt(koParts2[1])-1,parseInt(koParts2[2]));
+      const md1Label=koDate2.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][koDate2.getMonth()];
+
+      const md1Chains=[
+        {
+          name:'Training',
+          events:[
+            {team:match.teamA, startH:trainAH, dur:MD1_TRAIN_DUR},
+            {team:match.teamB, startH:trainBH, dur:MD1_TRAIN_DUR},
+          ].filter(e=>e.startH!==null)
+        },
+        {
+          name:'Press Conference',
+          events:[
+            {team:match.teamA, startH:pcAH, dur:MD1_PC_DUR},
+            {team:match.teamB, startH:pcBH, dur:MD1_PC_DUR},
+          ].filter(e=>e.startH!==null)
+        },
+      ].filter(ch=>ch.events.length>0);
+
+      let md1DedupFeedsHtml='';
+      md1Chains.forEach(chain=>{
+        const chainStart=Math.min(...chain.events.map(e=>e.startH));
+        const chainEnd  =Math.max(...chain.events.map(e=>e.startH+e.dur));
+
+        // Individual block per team event
+        let markers='';
+        chain.events.forEach(ev=>{
+          const evL=pct(ev.startH).toFixed(2);
+          const evW=(pct(ev.startH+ev.dur)-pct(ev.startH)).toFixed(2);
+          markers+=`<div class="feed-block" style="left:${evL}%;width:${evW}%;background:${c.full};position:absolute;top:4px;height:18px;border-radius:3px;display:flex;align-items:center;padding:0 8px;overflow:hidden;"
+            data-label="${ev.team} ${chain.name}" data-ibc="${hhmm(ev.startH)}">
+            <span style="font-size:10px;font-weight:600;color:#fff;white-space:nowrap;">${ev.team} ${chain.name} · ${hhmm(ev.startH)}</span>
+          </div>`;
+        });
+
+        md1DedupFeedsHtml+=`<div class="feed-row"
+          data-feed="${chain.name}"
+          data-feed-start="${hhmm(chainStart)}"
+          data-feed-end="${hhmm(chainEnd)}"
+          data-feed-off-start="individual"
+          data-feed-off-end="individual"
+          data-svc-start="—" data-svc-end="—"
+          data-svc-off-start="—" data-svc-off-end="—"
+          data-svc-name="DCL / ACC"
+          data-ch="${match.ch}">
+          <div class="feed-label" style="background:${c.feed};">
+            <div class="feed-pip" style="background:${c.pip};"></div>
+            <span class="feed-name">${chain.name}</span>
+          </div>
+          <div class="feed-track" style="background:${c.feed};position:relative;height:26px;">
+            <div class="grid-overlay">${gridOverlay()}</div>
+            ${markers}
+          </div>
+        </div>`;
+      });
+
+      matchRows+=`<div class="match-group">
+        <div class="match-row" onclick="toggleMatch(this)"
+          data-teams="${match.teamA} vs ${match.teamB}"
+          data-ch="${match.ch}"
+          data-city="${match.city}"
+          data-ko="—" data-end="—"
+          data-local="—" data-utc="—" data-tz="—"
+          data-train-a="${match.trainA}" data-pc-a="${match.pcA}"
+          data-train-b="${match.trainB}" data-pc-b="${match.pcB}"
+          data-team-a="${match.teamA}" data-team-b="${match.teamB}"
+          data-md1="${md1Label}">
+          <div class="row-label" style="border-left:3px solid ${c.pip};">
+            <span class="toggle-arrow" style="color:${c.pip};">▶</span>
+            <span class="match-id" style="color:${c.pip};font-size:9px;">${md1Ch}</span>
+            <span class="match-teams">${match.teamA} vs ${match.teamB}</span>
+            <span class="match-ch" style="color:${c.pip};">${match.ch}</span>
+          </div>
+          <div class="track">
+            <div class="grid-overlay">${gridOverlay()}</div>
+            <div class="match-block" style="left:${md1L}%;width:${md1W}%;background:${c.full};">
+              <span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span>
+              <span class="block-ko" style="color:${c.text};">${nextDayLabel}</span>
+            </div>
+          </div>
+        </div>
+        <div class="services-panel">${md1ServicesHtml}</div>
+        <div class="feeds-panel" style="display:none;">${md1DedupFeedsHtml}</div>
+      </div>`; 
+    });
+  }
+
+  const dayBadge = day.isMatchDay
+    ? `<span class="day-badge">MD ${day.md}</span>`
+    : `<span class="day-badge" style="background:var(--text3);color:var(--bg);">MD-1</span>`;
+  const daySub = day.isMatchDay
+    ? `${dm.length} matches · ${SERVICES.length} services each`
+    : `MD-1 activities for ${md1Matches.length} match${md1Matches.length>1?'es':''}`;
+
+  sec.dataset.startH=S;
+  sec.dataset.span=SP;
+  if(day.isMatchDay) sec.dataset.matchDay='1';
+
+  const PX_PER_HOUR=80;
+  const trackW=Math.round(SP*PX_PER_HOUR);
+  sec.innerHTML=`<div class="day-header">${dayBadge}<span class="day-title">${day.label}</span><span class="day-sub">${daySub}</span></div><div class="timeline-container" style="--track-w:${trackW}px;"><div class="time-axis"><div class="time-axis-label"></div><div class="time-axis-track">${ticks.map(h=>`<div class="time-tick" style="left:${((h-S)/SP*100).toFixed(3)}%">${tickLabel(h)}</div>`).join('')}<div class="now-line now-axis" id="now-axis-${day.date}" style="left:-9999px;"></div></div></div>${matchRows}</div>`;
+  schedEl.appendChild(sec);
+});
+
+// ── TOGGLE ───────────────────────────────────────────────────────
+function toggleMatch(row){
+  row.classList.toggle('expanded');
+  const isExpanded=row.classList.contains('expanded');
+  const group=row.closest('.match-group');
+  const svcPanel=group?.querySelector('.services-panel');
+  const feedPanel=group?.querySelector('.feeds-panel');
+  if(currentViewMode==='feed'){
+    if(svcPanel)  svcPanel.style.display='none';
+    if(feedPanel) feedPanel.style.display=isExpanded?'':'none';
+  } else {
+    if(feedPanel) feedPanel.style.display='none';
+    if(svcPanel)  { svcPanel.classList.toggle('open',isExpanded); }
+  }
+}
+function toggleSvc(row){
+  row.classList.toggle('svc-open');
+  const body=document.getElementById(row.dataset.body);
+  if(body) body.style.display=body.style.display==='none'?'':'none';
+}
+
+const PX_PER_HOUR_PRESETS={'1h':160,'all':null};
+let currentZoom='1h';
+
+function setZoom(mode, btn){
+  currentZoom=mode;
+  document.querySelectorAll('.zoom-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  applyZoom();
+}
+
+function applyZoom(){
+  const pxh=PX_PER_HOUR_PRESETS[currentZoom];
+  document.querySelectorAll('.timeline-container').forEach(tc=>{
+    const sec=tc.closest('.day-section');
+    if(!sec||sec.style.display==='none') return;
+    const sp=parseFloat(sec.dataset.span)||14;
+    const sH=parseFloat(sec.dataset.startH)||0;
+    let trackW;
+    if(pxh===null){
+      // All: fit entire day into container width
+      const availW=tc.parentElement.clientWidth-4;
+      trackW=Math.max(availW-240, 300);
+      tc.scrollLeft=0;
+    } else {
+      // 1h: 2-hour visible window — px/hour derived from container width
+      const visibleTrackW=tc.clientWidth-240;
+      const pxh2h=Math.max(60, Math.round(visibleTrackW/2));
+      trackW=Math.round(sp*pxh2h);
+      // Scroll to center current IBC time (or start of day)
+      const d=new Date();
+      const totalSec=d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()-5*3600;
+      const normSec=((totalSec%86400)+86400)%86400;
+      const ibcH=normSec/3600;
+      const targetH=(ibcH>=sH&&ibcH<=(sH+sp))?ibcH:sH;
+      const scrollX=Math.max(0, Math.round((targetH-sH)*pxh2h - visibleTrackW/2));
+      tc.scrollLeft=scrollX;
+    }
+    tc.style.setProperty('--track-w', trackW+'px');
+    tc.style.setProperty('--tc-max-w', 'none');
+  });
+  if(typeof updateMirror==='function') setTimeout(updateMirror,50);
+  if(typeof syncAllStickyLabels==='function') setTimeout(syncAllStickyLabels,0);
+}
+function toggleMD1(header){
+  header.classList.toggle('open');
+  const body=document.getElementById(header.dataset.group);
+  if(body) body.style.display=body.style.display==='none'?'':'none';
+}
+
+// ── TOOLTIP ──────────────────────────────────────────────────────
+const tooltip=document.getElementById('tooltip');
+
+function showTooltip(html){ tooltip.innerHTML=html; tooltip.style.display='block'; }
+function hideTooltip(){ tooltip.style.display='none'; }
+
+document.addEventListener('mousemove',e=>{
+  if(tooltip.style.display==='none') return;
+  const x=e.clientX+14, y=e.clientY-10;
+  tooltip.style.left=(x+tooltip.offsetWidth>window.innerWidth?e.clientX-tooltip.offsetWidth-10:x)+'px';
+  tooltip.style.top=(y+tooltip.offsetHeight>window.innerHeight?window.innerHeight-tooltip.offsetHeight-10:y)+'px';
+});
+
+// Tooltip target elements — use event delegation with mouseenter/mouseleave
+document.addEventListener('mouseover',e=>{
+  // Subtask marker tooltip
+  const subtaskMarker=e.target.closest('.subtask-marker');
+  if(subtaskMarker){
+    const feedRow=subtaskMarker.closest('.feed-row');
+    const ch=feedRow?.dataset.ch||'Match A';
+    const c=CH_COLORS[ch]||CH_COLORS['Match A'];
+    const parts=subtaskMarker.dataset.label.split(' (');
+    const name=parts[0];
+    const offset=parts[1]?parts[1].replace(')',''):'';
+    showTooltip(`
+      <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${name}</div>
+      <div class="tt-row"><span class="tt-k">Time (IBC)</span><span class="tt-v" style="color:${c.pip};">${subtaskMarker.dataset.ibc||'—'}</span></div>
+      <div class="tt-row"><span class="tt-k">Offset</span><span class="tt-v">${offset}</span></div>
+      <div class="tt-row"><span class="tt-k">Feed</span><span class="tt-v">${feedRow?.dataset.feed||'—'}</span></div>`);
+    return;
+  }
+  // MD-1 block
+  const md1Block=e.target.closest('.md1-block');
+  if(md1Block){
+    const c={full:md1Block.dataset.full, pip:md1Block.dataset.pip};
+    showTooltip(`<div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${md1Block.dataset.label}</div><div class="tt-row"><span class="tt-k">Start (IBC)</span><span class="tt-v" style="color:${c.pip};">${md1Block.dataset.start}</span></div><div class="tt-row"><span class="tt-k">End (IBC)</span><span class="tt-v" style="color:${c.pip};">${md1Block.dataset.end}</span></div><div class="tt-div"></div><div class="tt-row"><span class="tt-k">Match</span><span class="tt-v">${md1Block.dataset.match}</span></div>`);
+    return;
+  }
+  // Feed block
+  const feedBlock=e.target.closest('.feed-block:not(.md1-block)');
+  if(feedBlock){
+    const row=feedBlock.closest('.feed-row');
+    if(row&&row.dataset.feed){
+      const c=CH_COLORS[row.dataset.ch]||CH_COLORS['Match A'];
+      showTooltip(`
+        <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${row.dataset.feed}</div>
+        <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">FEED</span></div>
+        <div class="tt-row"><span class="tt-k">KO Start (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.feedStart}</span></div>
+        <div class="tt-row"><span class="tt-k">FW Stop (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.feedEnd}</span></div>
+        <div class="tt-row"><span class="tt-k">Offset start</span><span class="tt-v">${row.dataset.feedOffStart} to KO</span></div>
+        <div class="tt-row"><span class="tt-k">Offset end</span><span class="tt-v">${row.dataset.feedOffEnd} to KO</span></div>
+        <div class="tt-div"></div>
+        <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">SERVICE — ${row.dataset.svcName}</span></div>
+        <div class="tt-row"><span class="tt-k">Service start (IBC)</span><span class="tt-v">${row.dataset.svcStart}</span></div>
+        <div class="tt-row"><span class="tt-k">Service end (IBC)</span><span class="tt-v">${row.dataset.svcEnd}</span></div>
+        <div class="tt-row"><span class="tt-k">Offset start</span><span class="tt-v">${row.dataset.svcOffStart} to KO</span></div>
+        <div class="tt-row"><span class="tt-k">Offset end</span><span class="tt-v">${row.dataset.svcOffEnd} to KO</span></div>`);
+      return;
+    }
+  }
+  // Svc block
+  const svcBlock=e.target.closest('.svc-block');
+  if(svcBlock){
+    const row=svcBlock.closest('.service-row');
+    if(row&&row.dataset.svc){
+      const c=CH_COLORS[row.dataset.ch]||CH_COLORS['Match A'];
+      showTooltip(`
+        <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${row.dataset.svc}</div>
+        <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">SERVICE</span></div>
+        <div class="tt-row"><span class="tt-k">Service start (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.start}</span></div>
+        <div class="tt-row"><span class="tt-k">Service end (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.end}</span></div>
+        <div class="tt-row"><span class="tt-k">Offset start</span><span class="tt-v">${row.dataset.offsetStart} to KO</span></div>
+        <div class="tt-row"><span class="tt-k">Offset end</span><span class="tt-v">${row.dataset.offsetEnd} to KO</span></div>`);
+      return;
+    }
+  }
+  // Match row
+  const matchRow=e.target.closest('.match-row:not(.md1-row)');
+  if(matchRow&&matchRow.dataset.teams){
+    const c=CH_COLORS[matchRow.dataset.ch]||CH_COLORS['Match A'];
+    showTooltip(`<div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${matchRow.dataset.teams}</div><div class="tt-row"><span class="tt-k">Channel</span><span class="tt-v" style="color:${c.pip}">${matchRow.dataset.ch}</span></div><div class="tt-row"><span class="tt-k">City</span><span class="tt-v">${matchRow.dataset.city}</span></div><div class="tt-row"><span class="tt-k">KO (IBC)</span><span class="tt-v">${matchRow.dataset.ko}</span></div><div class="tt-row"><span class="tt-k">Est. end (IBC)</span><span class="tt-v">${matchRow.dataset.end}</span></div><div class="tt-div"></div><div class="tt-row"><span class="tt-k">KO local</span><span class="tt-v">${matchRow.dataset.local}</span></div><div class="tt-row"><span class="tt-k">KO UTC</span><span class="tt-v">${matchRow.dataset.utc}</span></div><div class="tt-row"><span class="tt-k">TZ</span><span class="tt-v">${matchRow.dataset.tz}</span></div><div class="tt-div"></div><div class="tt-row" style="margin-bottom:4px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">MD-1 &nbsp;(${matchRow.dataset.md1})</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamA} training</span><span class="tt-v">${matchRow.dataset.trainA}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamA} PC</span><span class="tt-v">${matchRow.dataset.pcA}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamB} training</span><span class="tt-v">${matchRow.dataset.trainB}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamB} PC</span><span class="tt-v">${matchRow.dataset.pcB}</span></div>`);
+    return;
+  }
+  hideTooltip();
+});
+
+document.addEventListener('mouseout',e=>{
+  const leaving=e.target.closest('.md1-block,.feed-block,.svc-block,.match-row,.subtask-marker');
+  if(!leaving) return;
+  const to=e.relatedTarget;
+  if(to&&leaving.contains(to)) return;
+  hideTooltip();
+});
+document.addEventListener('mouseleave',()=>hideTooltip());
+
+// ── NOW LINE TICKER ───────────────────────────────────────────────
+const nowLabel=document.getElementById('now-label');
+const navClock=document.getElementById('nav-clock');
+
+function updateNowLine(){
+  const d=new Date();
+  const totalSec=d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()-5*3600;
+  const normSec=((totalSec%86400)+86400)%86400;
+  const ibcH=normSec/3600;
+  const hh=String(Math.floor(ibcH)).padStart(2,'0');
+  const mm=String(Math.floor((normSec%3600)/60)).padStart(2,'0');
+  const ss=String(normSec%60).padStart(2,'0');
+  const label=hh+':'+mm+':'+ss;
+
+  // Update sticky clock always
+  navClock.textContent=label;
+
+  // Move all now-lines using per-section bounds
+  let globalInRange=false;
+  document.querySelectorAll('.day-section').forEach(sec=>{
+    const sH=parseFloat(sec.dataset.startH);
+    const sP=parseFloat(sec.dataset.span);
+    if(isNaN(sH)||isNaN(sP)) return;
+    const inRange=ibcH>=sH&&ibcH<=(sH+sP);
+    if(inRange) globalInRange=true;
+    const leftPct=inRange?((ibcH-sH)/sP*100).toFixed(3)+'%':'-9999px';
+    sec.querySelectorAll('.now-line').forEach(el=>{
+      el.style.left=nowVisible?leftPct:'-9999px';
+    });
+  });
+
+  // Position floating label above the axis line of the visible day section
+  let axisLine=null;
+  document.querySelectorAll('.now-axis').forEach(el=>{
+    const sec=el.closest('.day-section');
+    if(sec&&sec.style.display!=='none') axisLine=el;
+  });
+
+  if(axisLine&&globalInRange&&nowVisible){
+    const rect=axisLine.getBoundingClientRect();
+    if(rect.top>0&&rect.top<window.innerHeight){
+      nowLabel.textContent=label;
+      nowLabel.style.display='block';
+      nowLabel.style.left=(rect.left+rect.width/2)+'px';
+      nowLabel.style.top=(rect.top-18)+'px';
+    } else {
+      nowLabel.style.display='none';
+    }
+  } else {
+    nowLabel.style.display='none';
+  }
+}
+
+updateNowLine();
+setInterval(updateNowLine,1000);
+
+// On load: show first match day (not MD-1 only days), no scroll animation
+(function initialLoad(){
+  const todayKey=getIBCDateKey();
+  // All section dates (match days + MD-1 days), sorted
+  const allSectionDates=[...document.querySelectorAll('.day-section')].map(s=>s.dataset.date).sort();
+  // Prefer today if it exists, else first section date (could be MD-1 day like Jun 10)
+  const targetKey=allSectionDates.includes(todayKey) ? todayKey : allSectionDates[0];
+
+  document.querySelectorAll('.cal-day').forEach(c=>c.classList.remove('selected'));
+  const targetCalEl=calStrip.querySelector(`[data-date="${targetKey}"]`);
+  if(targetCalEl){ targetCalEl.classList.add('selected'); targetCalEl.scrollIntoView({behavior:'instant',inline:'center',block:'nearest'}); }
+  selectedDate=targetKey;
+
+  document.querySelectorAll('.day-section').forEach(s=>{
+    s.style.display = s.dataset.date===targetKey ? '' : 'none';
+  });
+  // Only show now-line if today matches
+  setNowLineVisible(targetKey===todayKey);
+  setTimeout(()=>{ applyZoom(); setTimeout(syncAllStickyLabels,50); },50);
+})();
+
+const now=new Date();
+document.getElementById('footer-ts').textContent='Generated '+now.toISOString().slice(0,16).replace('T',' ')+' UTC';
+
+// ── THEME TOGGLE ─────────────────────────────────────────────────
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light-mode');
+  document.getElementById('theme-btn').textContent=isLight?'☾ Dark':'☀ Light';
+}
+
+// ── VIEW MODE ────────────────────────────────────────────────────
+let currentViewMode='all'; // all | svc | feed
+
+function setViewMode(mode, btn){
+  currentViewMode=mode;
+  document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active', b.dataset.vm===mode));
+  applyViewMode();
+}
+
+function applyViewMode(){
+  document.querySelectorAll('.match-group').forEach(g=>{
+    const svcPanel  = g.querySelector('.services-panel');
+    const feedPanel = g.querySelector('.feeds-panel');
+    const matchRow  = g.querySelector('.match-row');
+    if(!svcPanel||!matchRow) return;
+    const isExpanded = matchRow.classList.contains('expanded');
+
+    if(currentViewMode==='feed'){
+      // Show deduped feed panel if match is expanded, hide services
+      if(svcPanel)  svcPanel.style.display='none';
+      if(feedPanel) feedPanel.style.display=isExpanded?'':'none';
+    } else if(currentViewMode==='svc'){
+      // Show only service rows (no feeds inside)
+      if(feedPanel) feedPanel.style.display='none';
+      if(svcPanel)  svcPanel.style.display=isExpanded?'':'none';
+      // Collapse all svc-feeds-body
+      svcPanel?.querySelectorAll('.svc-feeds-body').forEach(b=>b.style.display='none');
+    } else {
+      // All — restore services panel, hide feeds panel
+      if(feedPanel) feedPanel.style.display='none';
+      if(svcPanel)  svcPanel.style.display=isExpanded?'':'none';
+      // Restore svc-feeds-body visibility based on svc-open state
+      svcPanel?.querySelectorAll('.service-row').forEach(row=>{
+        const body=document.getElementById(row.dataset.body);
+        if(body) body.style.display=row.classList.contains('svc-open')?'':'none';
+      });
+    }
+  });
+}
+
+// ── COLLAPSE ALL ─────────────────────────────────────────────────
+let allExpanded=false;
+function collapseAll(){
+  allExpanded=!allExpanded;
+  document.getElementById('collapse-all-btn').textContent=allExpanded?'⊞ Expand all':'⊟ Collapse all';
+  document.querySelectorAll('.match-row').forEach(row=>{
+    const panel=row.nextElementSibling;
+    if(!panel) return;
+    if(allExpanded){
+      row.classList.add('expanded');
+      panel.classList.add('open');
+    } else {
+      row.classList.remove('expanded');
+      panel.classList.remove('open');
+    }
+  });
+}
+
+// ── SERVICE + CHANNEL FILTER ─────────────────────────────────────
+const ALL_SERVICES=SERVICES.map(s=>s.name);
+let activeServices=new Set(ALL_SERVICES);
+const ALL_CHANNELS=['Match A','Match B','Match C','Match D','Match E','Match F','MD-1 A','MD-1 B','MD-1 C','MD-1 D'];
+let activeChannels=new Set(ALL_CHANNELS);
+
+function buildFilterPanel(){
+  const panel=document.getElementById('filter-panel');
+
+  // Channel section
+  let chHtml=`<div class="filter-section"><span class="filter-label">Channel</span>`;
+  ALL_CHANNELS.forEach(ch=>{
+    const c=CH_COLORS[ch]||CH_COLORS[ch.replace('MD-1 ','Match ')]||null;
+    const bg=c?c.full:'#333';
+    const fg=c?c.pip:'#aaa';
+    const on=activeChannels.has(ch);
+    chHtml+=`<button class="svc-chip ${on?'active':'inactive'}" data-ch="${ch}" onclick="toggleChannelFilter(this)" style="${on?`background:${bg}22;border-color:${fg}44;color:${fg}`:''}">`
+      +`<span class="chip-dot" style="background:${fg};"></span>${ch}</button>`;
+  });
+  chHtml+=`</div>`;
+
+  // Service section
+  let svcHtml=`<div class="filter-sep"></div><div class="filter-section"><span class="filter-label">Service</span>`;
+  ALL_SERVICES.forEach(name=>{
+    const on=activeServices.has(name);
+    svcHtml+=`<button class="svc-chip ${on?'active':'inactive'}" data-svc="${name}" onclick="toggleServiceFilter(this)">`
+      +`<span class="chip-dot" style="background:var(--text3);"></span>${name}</button>`;
+  });
+  svcHtml+=`</div>`;
+
+  panel.innerHTML=chHtml+svcHtml+`<button id="filter-reset" onclick="resetFilters()">reset all</button>`;
+}
+
+function toggleFilterPanel(btn){
+  const panel=document.getElementById('filter-panel');
+  const open=panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if(open) buildFilterPanel();
+}
+
+function toggleChannelFilter(btn){
+  const ch=btn.dataset.ch;
+  if(activeChannels.has(ch)){
+    if(activeChannels.size===1) return;
+    activeChannels.delete(ch);
+  } else {
+    activeChannels.add(ch);
+  }
+  buildFilterPanel();
+  applyFilters();
+}
+
+function toggleServiceFilter(btn){
+  const name=btn.dataset.svc;
+  if(activeServices.has(name)){
+    if(activeServices.size===1) return;
+    activeServices.delete(name);
+  } else {
+    activeServices.add(name);
+  }
+  buildFilterPanel();
+  applyFilters();
+}
+
+function resetFilters(){
+  activeServices=new Set(ALL_SERVICES);
+  activeChannels=new Set(ALL_CHANNELS);
+  buildFilterPanel();
+  applyFilters();
+}
+
+function applyFilters(){
+  // Channel filter: hide/show match-group rows
+  document.querySelectorAll('.match-group').forEach(g=>{
+    const row=g.querySelector('.match-row');
+    if(!row) return;
+    const ch=row.dataset.ch;
+    const isMD1=row.querySelector('.match-id')?.textContent?.startsWith('MD-1');
+    let visible=true;
+    if(isMD1){
+      const md1Ch='MD-1 '+(ch||'').replace('Match ','');
+      visible=activeChannels.has(md1Ch);
+    } else {
+      visible=activeChannels.has(ch);
+    }
+    g.style.display=visible?'':'none';
+  });
+  // Service filter
+  document.querySelectorAll('.svc-group').forEach(g=>{
+    const svcRow=g.querySelector('.service-row');
+    if(!svcRow) return;
+    const name=svcRow.dataset.svc;
+    g.style.display=(!name||activeServices.has(name))?'':'none';
+  });
+}
+
+// ── STICKY SCROLL MIRROR ─────────────────────────────────────────
+const mirrorWrap=document.getElementById('scroll-mirror-wrap');
+const mirrorInner=document.getElementById('scroll-mirror-inner');
+let activeTC=null, syncingFromMirror=false, syncingFromTC=false;
+
+function updateMirror(){
+  // Find the currently visible timeline-container
+  const tcs=[...document.querySelectorAll('.timeline-container')].filter(tc=>{
+    const sec=tc.closest('.day-section');
+    return sec&&sec.style.display!=='none';
+  });
+  // Pick the one most visible in viewport
+  let best=null, bestArea=0;
+  tcs.forEach(tc=>{
+    const r=tc.getBoundingClientRect();
+    const visible=Math.max(0,Math.min(r.bottom,window.innerHeight)-Math.max(r.top,0));
+    if(visible>bestArea){ bestArea=visible; best=tc; }
+  });
+  if(best!==activeTC){
+    if(activeTC) activeTC.removeEventListener('scroll',onTCScroll);
+    activeTC=best;
+    if(activeTC){
+      activeTC.addEventListener('scroll',onTCScroll);
+      // Set mirror width to match scrollable content
+      const inner=activeTC.querySelector('.time-axis-track')||activeTC.querySelector('.track');
+      const totalW=240+(inner?inner.offsetWidth:0);
+      mirrorInner.style.width=totalW+'px';
+      mirrorWrap.scrollLeft=activeTC.scrollLeft;
+    }
+  }
+}
+
+function onTCScroll(){
+  if(syncingFromMirror) return;
+  syncingFromTC=true;
+  mirrorWrap.scrollLeft=activeTC.scrollLeft;
+  syncingFromTC=false;
+}
+
+mirrorWrap.addEventListener('scroll',()=>{
+  if(syncingFromTC||!activeTC) return;
+  syncingFromMirror=true;
+  activeTC.scrollLeft=mirrorWrap.scrollLeft;
+  syncingFromMirror=false;
+});
+
+window.addEventListener('scroll',updateMirror,{passive:true});
+window.addEventListener('resize',()=>{updateMirror();applyZoom();});
+setTimeout(updateMirror,100);
+
+// ── DRAG TO SCROLL ───────────────────────────────────────────────
+let drag={active:false, tc:null, startX:0, startScroll:0, moved:false};
+
+const DRAG_TARGETS='.track,.svc-track,.feed-track,.grid-overlay,.time-axis-track,.gl,.now-line,.ko-line,.match-block,.svc-block,.feed-block,.time-axis';
+
+document.addEventListener('mousedown',e=>{
+  if(!e.target.closest(DRAG_TARGETS)) return;
+  const tc=e.target.closest('.timeline-container');
+  if(!tc) return;
+  drag={active:true, tc, startX:e.clientX, startScroll:tc.scrollLeft, moved:false};
+  e.preventDefault();
+},{passive:false});
+
+document.addEventListener('mousemove',e=>{
+  if(!drag.active) return;
+  const dx=e.clientX-drag.startX;
+  if(Math.abs(dx)>4){
+    drag.moved=true;
+    drag.tc.style.cursor='grabbing';
+    drag.tc.scrollLeft=drag.startScroll-dx;
+  }
+});
+
+document.addEventListener('mouseup',()=>{
+  if(!drag.active) return;
+  drag.tc.style.cursor='';
+  drag.active=false;
+  // moved flag stays true briefly to block the upcoming click event
+  if(drag.moved) setTimeout(()=>{ drag.moved=false; }, 50);
+  else drag.moved=false;
+});
+
+// Intercept click during capture phase — cancel if we dragged
+document.addEventListener('click',e=>{
+  if(drag.moved){ e.stopPropagation(); e.preventDefault(); }
+},true);
+
+document.addEventListener('mouseleave',()=>{
+  if(drag.active){ drag.tc.style.cursor=''; drag.active=false; drag.moved=false; }
+});
+
+// Cursor hint on hover
+document.addEventListener('mouseover',e=>{
+  if(drag.active) return;
+  if(e.target.closest(DRAG_TARGETS)){
+    const tc=e.target.closest('.timeline-container');
+    if(tc) tc.style.cursor='grab';
+  }
+});
+document.addEventListener('mouseout',e=>{
+  if(drag.active) return;
+  if(e.target.closest(DRAG_TARGETS)){
+    const tc=e.target.closest('.timeline-container');
+    if(tc) tc.style.cursor='';
+  }
+});
+
+// Touch
+let touch={active:false, tc:null, startX:0, startScroll:0};
+document.addEventListener('touchstart',e=>{
+  if(!e.target.closest(DRAG_TARGETS)) return;
+  const tc=e.target.closest('.timeline-container');
+  if(!tc) return;
+  touch={active:true, tc, startX:e.touches[0].clientX, startScroll:tc.scrollLeft};
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!touch.active) return;
+  const dx=e.touches[0].clientX-touch.startX;
+  touch.tc.scrollLeft=touch.startScroll-dx;
+},{passive:true});
+document.addEventListener('touchend',()=>{ touch.active=false; });
+
+// ── STICKY LABEL COLUMNS (JS-based, reliable cross-browser) ──────────────────
+// CSS position:sticky + left:0 is unreliable in horizontal-scrolling flex containers;
+// instead we translateX each label by the container's scrollLeft on every scroll event.
+const LABEL_SEL='.row-label,.svc-label,.feed-label,.time-axis-label';
+
+function applyLabelSticky(tc){
+  const sl=tc.scrollLeft;
+  tc.querySelectorAll(LABEL_SEL).forEach(el=>{ el.style.transform=`translateX(${sl}px)`; });
+}
+
+// Capture phase: scroll events don't bubble, so we intercept at document level
+document.addEventListener('scroll',e=>{
+  if(e.target.classList?.contains('timeline-container')) applyLabelSticky(e.target);
+},{capture:true,passive:true});
+
+// Also sync when programmatic scrollLeft is set (called from applyZoom / goLive)
+function syncAllStickyLabels(){
+  document.querySelectorAll('.timeline-container').forEach(tc=>{
+    const sec=tc.closest('.day-section');
+    if(sec&&sec.style.display==='none') return;
+    applyLabelSticky(tc);
+  });
+}
+
+// ── EXCEL LOAD OVERLAY ────────────────────────────────────────────────────────
+
+let _parsedXlData = null; // holds { services, matches } after file parse
+
+function showXlOverlay(){
+  document.getElementById('xl-overlay').classList.remove('hidden');
+}
+function hideXlOverlay(){
+  document.getElementById('xl-overlay').classList.add('hidden');
+}
+
+// Drag-over styling
+const xlDrop = document.getElementById('xl-drop-main');
+['dragover','dragenter'].forEach(ev => xlDrop.addEventListener(ev, e => { e.preventDefault(); xlDrop.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(ev => xlDrop.addEventListener(ev, () => xlDrop.classList.remove('drag-over')));
+xlDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if(file) { parseXlFile(file); }
+});
+
+function handleXlFile(input){
+  const file = input.files?.[0];
+  if(file) parseXlFile(file);
+}
+
+function setFileStatus(ok, msg){
+  const el = document.getElementById('xl-file-status');
+  el.textContent = msg;
+  el.className = 'xl-status ' + (ok ? 'ok' : 'err');
+  document.getElementById('xl-load-btn').disabled = !ok;
+}
+
+function parseXlFile(file){
+  setFileStatus(false, '⟳ reading…');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const result = parseWorkbook(wb);
+      if(result.error){ setFileStatus(false, '✕ ' + result.error); return; }
+      _parsedXlData = result;
+      setFileStatus(true, '✓ ready  (' + result.matches.length + ' matches)');
+    } catch(err){
+      setFileStatus(false, '✕ parse error');
+      console.error(err);
+    }
+  };
+  reader.onerror = () => setFileStatus(false, '✕ file error');
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Workbook parser ──────────────────────────────────────────────────────────
+
+function parseWorkbook(wb){
+  const sheetNames = wb.SheetNames;
+  if(!sheetNames.includes('Matches')) return {error:'Missing "Matches" sheet'};
+  if(!sheetNames.includes('Services')) return {error:'Missing "Services" sheet'};
+  if(!sheetNames.includes('Feeds')) return {error:'Missing "Feeds" sheet'};
+
+  // Helper: sheet to array of row-objects (header in row 2, data from row 3)
+  function sheetRows(name, headerRow){
+    const ws = wb.Sheets[name];
+    if(!ws) return [];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+    const hdr = rows[headerRow || 1]; // 0-indexed; row 2 = index 1
+    const out = [];
+    for(let i = (headerRow||1)+1; i < rows.length; i++){
+      const r = rows[i];
+      if(!r || r.every(v=>v===null||v==='')) continue;
+      const obj = {};
+      hdr.forEach((h,j) => { if(h) obj[String(h).trim()] = r[j] ?? null; });
+      out.push(obj);
+    }
+    return out;
+  }
+
+  // Helpers
+  function str(v){ return v===null||v===undefined ? null : String(v).trim(); }
+  function num(v){ return v===null||v===undefined ? null : Number(v); }
+  function hhmmToDecimal(s){
+    if(!s) return null;
+    const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+    if(!m) return null;
+    return parseInt(m[1]) + parseInt(m[2])/60;
+  }
+  function ddmmyyyyToISO(s){
+    if(!s) return null;
+    const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(!m) return null;
+    return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+  function dateLabel(iso){
+    if(!iso) return '';
+    const [y,mo,d] = iso.split('-');
+    const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return `${parseInt(d)} ${mNames[parseInt(mo)-1]} ${y}`;
+  }
+  function toIBCTimeStr(v){
+    if(!v) return null;
+    const s = String(v).trim();
+    return s.endsWith('IBC') ? s : s + ' IBC';
+  }
+  function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,10) || 'svc'; }
+
+  // ── Settings (optional) ──────────────────────────────────────────
+  let settings = {};
+  if(sheetNames.includes('Settings')){
+    sheetRows('Settings').forEach(r => {
+      const k = str(r['Key']); const v = r['Value'];
+      if(k) settings[k] = v;
+    });
+  }
+  const matchDurMin = num(settings['match_duration_min']) || 105;
+
+  // ── Services ──────────────────────────────────────────────────────
+  const svcRows = sheetRows('Services');
+  const svcMap = {}; // name → svc object
+  // Normalize column names (some variants from v2 vs v3)
+  svcRows.forEach((r,i) => {
+    const rawName = str(r['Service Name'] ?? r['Service']);
+    if(!rawName) return;
+    // skip note rows
+    if(rawName.startsWith('↑') || rawName.startsWith('Edit')) return;
+    const svc = {
+      id: slugify(rawName) + '_' + i,
+      name: rawName,
+      start: num(r['Start Offset\n(min from KO)'] ?? r['Start Offset'] ?? r['Start\nOffset'] ?? r['start']) || 0,
+      stop:  num(r['Stop Offset\n(min from KO)']  ?? r['Stop Offset']  ?? r['Stop\nOffset']  ?? r['stop'])  || 0,
+      feeds: [],
+    };
+    svcMap[rawName] = svc;
+  });
+
+  // ── Feeds ─────────────────────────────────────────────────────────
+  const feedRows = sheetRows('Feeds');
+  feedRows.forEach(r => {
+    const svcName = str(r['Service']);
+    const feedName = str(r['Feed Name'] ?? r['Feed']);
+    if(!svcName || !feedName) return;
+    if(feedName.startsWith('↑')) return;
+    if(!svcMap[svcName]) return; // unknown service, skip
+
+    const isIndiv = !!(r['Individual\nSchedule'] ?? r['Individual']);
+    const activeFrom = str(r['active_from\n(DD/MM/YYYY)'] ?? r['active_from'] ?? r['Active From'] ?? null);
+
+    const feed = {
+      name: feedName,
+      start: isIndiv ? null : num(r['TX Start\n(min from KO)'] ?? r['TX Start'] ?? r['start']),
+      stop:  isIndiv ? null : num(r['TX End\n(min from KO)']   ?? r['TX End']   ?? r['stop']),
+      individual: isIndiv || undefined,
+      subtasks: [],
+    };
+    if(activeFrom) feed.activeFrom = activeFrom;
+    svcMap[svcName].feeds.push(feed);
+  });
+
+  // ── Subtasks ──────────────────────────────────────────────────────
+  if(sheetNames.includes('Subtasks')){
+    sheetRows('Subtasks').forEach(r => {
+      const svcName  = str(r['Service']);
+      const feedName = str(r['Feed']);
+      const stName   = str(r['Subtask Name'] ?? r['Subtask']);
+      const offset   = num(r['Start Offset\n(min from KO)'] ?? r['Start Offset'] ?? r['offset']);
+      if(!svcName || !feedName || !stName || offset===null) return;
+      const svc = svcMap[svcName];
+      if(!svc) return;
+      const feed = svc.feeds.find(f => f.name===feedName);
+      if(!feed) return;
+      feed.subtasks.push({name: stName, offset: offset});
+    });
+  }
+
+  const services = Object.values(svcMap).filter(s => s.feeds.length > 0);
+
+  // ── Matches ───────────────────────────────────────────────────────
+  const matchRows = sheetRows('Matches');
+  if(!matchRows.length) return {error:'No data rows in Matches sheet'};
+
+  const parsedMatches = [];
+  matchRows.forEach(r => {
+    const mNum = num(r['M#']);
+    if(!mNum) return;
+    const rawDate = str(r['Date\n(DD/MM/YYYY)'] ?? r['Date']);
+    const isoDate = ddmmyyyyToISO(rawDate);
+    if(!isoDate) return;
+
+    const rawKO = str(r['IBC KO\n(HH:MM)'] ?? r['IBC KO']);
+    const koIBC = hhmmToDecimal(rawKO);
+    if(koIBC === null) return;
+
+    const match = {
+      m:         Math.round(mNum),
+      md:        Math.round(num(r['MD#']) || 0),
+      date:      isoDate,
+      dateLabel: dateLabel(isoDate),
+      ch:        str(r['Channel\n(Match A-F)'] ?? r['Channel']) || 'Match A',
+      teamA:     str(r['Team A\n(trigram)'] ?? r['Team A']) || '???',
+      teamB:     str(r['Team B\n(trigram)'] ?? r['Team B']) || '???',
+      fullA:     str(r['Full Name A'] ?? r['Team A\n(trigram)'] ?? r['Team A']) || '???',
+      fullB:     str(r['Full Name B'] ?? r['Team B\n(trigram)'] ?? r['Team B']) || '???',
+      city:      str(r['City']) || '',
+      localKO:   str(r['Local KO\n(HH:MM)'] ?? r['Local KO']) || '',
+      utcKO:     str(r['UTC KO\n(HH:MM)']   ?? r['UTC KO'])   || '',
+      tz:        str(r['Time Zone'] ?? r['TZ']) || '',
+      koIBC:     koIBC,
+      dur:       matchDurMin,
+      trainA:    toIBCTimeStr(r['MD-1\nTrain A (IBC)'] ?? r['Train A']),
+      pcA:       toIBCTimeStr(r['MD-1\nPC A (IBC)']    ?? r['PC A']),
+      trainB:    toIBCTimeStr(r['MD-1\nTrain B (IBC)'] ?? r['Train B']),
+      pcB:       toIBCTimeStr(r['MD-1\nPC B (IBC)']    ?? r['PC B']),
+    };
+    parsedMatches.push(match);
+  });
+
+  if(!parsedMatches.length) return {error:'No valid match rows parsed'};
+  return {services, matches: parsedMatches};
+}
+
+// ── Apply loaded data ────────────────────────────────────────────────────────
+
+function applyLoadedData(){
+  if(!_parsedXlData) return;
+  try {
+    localStorage.setItem('fwc26_services', JSON.stringify(_parsedXlData.services));
+    localStorage.setItem('fwc26_matches',  JSON.stringify(_parsedXlData.matches));
+  } catch(e) { console.warn('localStorage save failed:', e); }
+  hideXlOverlay();
+  window.location.reload();
+}
+
+function useDemoData(){
+  try {
+    localStorage.removeItem('fwc26_services');
+    localStorage.removeItem('fwc26_matches');
+  } catch(e) {}
+  hideXlOverlay();
+  // No reload needed — page already loaded with demo data
+}
+
+// ── Show overlay on first load (no cached data) ───────────────────────────────
+(function checkDataOnLoad(){
+  const hasSvc = localStorage.getItem('fwc26_services');
+  const hasMat = localStorage.getItem('fwc26_matches');
+  // Show overlay only when no cached data exists
+  if(!hasSvc || !hasMat){
+    showXlOverlay();
+  }
+})();
+</script>
+</body>
+</html>
