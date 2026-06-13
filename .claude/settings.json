@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/HBMC Op 01/.vscode/hbs-tx-schedule/docs/**)",
+      "Read(//c/Users/HBMC Op 01/.vscode/hbs-tx-schedule/**)"
+    ]
+  }
+}

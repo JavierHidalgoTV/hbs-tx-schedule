@@ -30,37 +30,52 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#05070d;
-  --s1:#0a1120;
-  --s2:#0c1628;
-  --s3:#070e1a;
-  --nav:#060810;
-  --border:rgba(255,255,255,0.28);
-  --border2:rgba(255,255,255,0.55);
-  --text:#f0f6ff;
-  --text2:#b8ccee;
-  --text3:#7888b8;
-  --accent:#22d3ee;
+  --row-even:#1e2028;
+  --row-odd:#1c1e26;
+  --track-even:#191b22;
+  --track-odd:#191b22;
+  --label-text:#8090a8;
+  --label-text-muted:#7a90a8;
+  --bg:#16181f;
+  --s1:var(--row-even);
+  --s2:var(--row-odd);
+  --s3:var(--row-even);
+  --nav:#16181f;
+  --border:#2a2d38;
+  --border2:#3c3f4a;
+  --text:#e8ecf4;
+  --text2:#b8c8e0;
+  --text3:#6a7a90;
+  --accent:#60a8ff;
   --label-bg:var(--s1);
 }
 body.light-mode{
-  --bg:#edf1f9;
+  --row-even:#ffffff;
+  --row-odd:#fafbfc;
+  --track-even:#f4f6f9;
+  --track-odd:#f4f6f9;
+  --block-bg:#eef0f5;
+  --block-text:#2a3a5a;
+  --block-text-sub:#556677;
+  --label-text:#1a1c24;
+  --label-text-muted:#8898aa;
+  --bg:#f8f9fb;
   --s1:#ffffff;
-  --s2:#f0f5fc;
-  --s3:#e6ecf8;
-  --nav:#ffffff;
-  --border:rgba(10,30,80,0.09);
-  --border2:rgba(10,30,80,0.16);
-  --text:#0f1629;
-  --text2:#3d4f80;
-  --text3:#6b78a0;
+  --s2:#fafbfc;
+  --s3:#ffffff;
+  --nav:#f8f9fb;
+  --border:#e8eaef;
+  --border2:#d0d4dc;
+  --text:#1a1c24;
+  --text2:#2a3a5a;
+  --text3:#8898aa;
   --accent:#0891b2;
   --label-bg:var(--s1);
 }
 body{background:var(--bg);color:var(--text);font-family:'SF Mono','Consolas','Liberation Mono',monospace;font-size:13px;line-height:1.4;min-height:100vh;overflow-x:hidden;}
 
 /* STICKY NAV */
-#nav-bar{position:sticky;top:0;z-index:100;background:var(--nav);border-bottom:1px solid var(--border2);padding:10px 24px;}
+#nav-bar{position:sticky;top:0;z-index:100;background:var(--nav);border-bottom:1px solid var(--border);padding:10px 24px;}
 .nav-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .nav-title{font-size:11px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);}
 .nav-meta{font-size:11px;color:var(--text3);letter-spacing:.04em;}
@@ -78,7 +93,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Consolas','Li
 .cal-arrow:hover{background:rgba(255,255,255,.08);color:var(--text);}
 #cal-strip{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;flex:1;}
 #cal-strip::-webkit-scrollbar{display:none;}
-.cal-day{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:5px 9px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:background .12s,border-color .12s;min-width:46px;}
+.cal-day{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:5px 9px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:background .12s,border-color .12s;min-width:46px;background:#22242e;}
 .cal-day:hover{background:rgba(128,128,128,.08);}
 .cal-day.has-matches{border-color:var(--border2);}
 .cal-day.selected{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.45);}
@@ -129,7 +144,7 @@ body.light-mode .legend-ch > div{background:var(--lc) !important;}
 .match-id{font-size:10px;color:var(--text2);letter-spacing:.05em;flex-shrink:0;min-width:24px;}
 .match-teams{font-size:12px;font-weight:600;color:var(--text);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .match-ch{font-size:10px;color:var(--text3);white-space:nowrap;margin-left:auto;padding-left:4px;flex-shrink:0;}
-.track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:40px;border-bottom:1px solid var(--border2);box-sizing:border-box;}
+.track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:40px;border-bottom:1px solid var(--border2);box-sizing:border-box;background:var(--track-even);}
 
 .services-panel{display:none;}
 .services-panel.open{display:block;}
@@ -139,7 +154,7 @@ body.light-mode .legend-ch > div{background:var(--lc) !important;}
 .svc-label{width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 10px 0 14px;border-right:1px solid var(--border);border-bottom:1px solid var(--border2);align-self:stretch;cursor:pointer;position:relative;z-index:20;background:var(--s2);box-shadow:6px 0 10px rgba(0,0,0,.35);}
 .svc-pip{width:3px;height:22px;border-radius:1px;flex-shrink:0;}
 .svc-name{font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.svc-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:43px;border-bottom:1px solid var(--border2);box-sizing:border-box;}
+.svc-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:43px;border-bottom:1px solid var(--border2);box-sizing:border-box;background:var(--track-odd);}
 .svc-feeds-body{border-bottom:1px solid var(--border);}
 .service-row.svc-open .svc-arrow{transform:rotate(90deg);}
 
@@ -149,18 +164,19 @@ body.light-mode .legend-ch > div{background:var(--lc) !important;}
 .feed-label{width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:5px;padding:0 10px 0 34px;border-right:1px solid var(--border);border-bottom:1px solid var(--border2);border-left:2px solid rgba(34,211,238,0.25);align-self:stretch;position:relative;z-index:20;background:var(--s3);box-shadow:6px 0 10px rgba(0,0,0,.35);}
 .feed-pip{width:2px;height:17px;border-radius:1px;flex-shrink:0;opacity:.5;}
 .feed-name{font-size:14px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.feed-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:37px;border-bottom:1px solid var(--border2);box-sizing:border-box;}
+.feed-track{flex-shrink:0;width:var(--track-w,640px);position:relative;height:37px;border-bottom:1px solid var(--border2);box-sizing:border-box;background:var(--track-even);}
 
 /* BLOCKS */
-.match-block{position:absolute;top:5px;height:30px;border-radius:4px;display:flex;align-items:center;padding:0 10px;gap:8px;overflow:hidden;cursor:default;}
+.match-block{position:absolute;top:5px;height:30px;border-radius:3px;display:flex;align-items:center;padding:0 10px;gap:8px;overflow:hidden;cursor:default;border:none;border-top:2px solid transparent;}
 .svc-block{position:absolute;top:6px;height:31px;border-radius:3px;display:flex;align-items:center;padding:0 8px;overflow:hidden;}
 .feed-block{position:absolute;top:4px;height:29px;border-radius:2px;display:flex;align-items:center;padding:0 6px;overflow:visible;}
-/* dark mode: texto siempre blanco en bloques principales */
-body:not(.light-mode) .match-block .block-teams,
-body:not(.light-mode) .match-block .block-ko{color:#fff !important;}
+
 
 .subtask-marker{position:absolute;top:-2px;bottom:-2px;width:2px;z-index:4;cursor:default;opacity:.85;will-change:transform;transform:translateX(0);}
 .subtask-marker:hover{opacity:1;}
+.milestone-marker{position:absolute;top:0;bottom:0;width:2px;z-index:5;cursor:help;opacity:.9;will-change:transform;transform:translateX(0);}
+.milestone-marker:hover{opacity:1;}
+.svc-block-pre{position:absolute;top:6px;height:31px;cursor:pointer;}
 .block-teams{font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.02em;position:relative;z-index:1;}
 .block-ko{font-size:10px;font-weight:700;opacity:.7;margin-left:auto;white-space:nowrap;position:relative;z-index:1;}
 .svc-block-label{font-size:12px;font-weight:600;white-space:nowrap;letter-spacing:.02em;position:relative;z-index:1;}
@@ -220,81 +236,84 @@ footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--border);displ
 #collapse-all-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.06em;padding:4px 10px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s;}
 #collapse-all-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);}
 
-/* LIGHT MODE — LIGHT NAV
-   Nav uses --nav:#ffffff; all nav elements use dark-on-light values */
-body.light-mode #nav-bar            { border-bottom-color: rgba(10,30,80,0.12); box-shadow: 0 1px 8px rgba(0,0,0,.07); }
-body.light-mode .nav-title          { color: #0891b2; }
-body.light-mode .nav-meta           { color: #4a5878; }
-body.light-mode .nav-meta strong    { color: #1e2a4a; }
-body.light-mode #xl-reload-btn      { border-color: rgba(10,30,80,0.18); color: #4a5878; }
-body.light-mode #xl-reload-btn:hover{ background: rgba(10,30,80,0.05); color: #1e2a4a; }
-body.light-mode #theme-btn          { border-color: rgba(10,30,80,0.18); color: #4a5878; }
-body.light-mode #theme-btn:hover    { background: rgba(10,30,80,0.05); }
-body.light-mode #live-btn           { background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.35); color: #0891b2; }
-body.light-mode #live-btn:hover     { background: rgba(8,145,178,0.15); }
-body.light-mode #live-btn.active    { background: rgba(8,145,178,0.18); }
-body.light-mode .cal-day            { border-color: transparent; }
-body.light-mode .cal-day.has-matches{ border-color: rgba(10,30,80,0.12); }
-body.light-mode .cal-dw             { color: #4a5878; }
-body.light-mode .cal-dn             { color: #1e2a4a; }
-body.light-mode .cal-mo             { color: #6b78a0; }
-body.light-mode .cal-day.today .cal-dn { color: #0891b2; }
+/* LIGHT MODE — NAV (Steel inverted) */
+body.light-mode #nav-bar            { border-bottom-color: var(--border2); box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+body.light-mode .nav-title          { color: var(--accent); }
+body.light-mode .nav-meta           { color: var(--text3); }
+body.light-mode .nav-meta strong    { color: var(--text); }
+body.light-mode #xl-reload-btn      { border-color: var(--border2); color: var(--text3); }
+body.light-mode #xl-reload-btn:hover{ background: rgba(0,0,0,.04); color: var(--text); }
+body.light-mode #theme-btn          { border-color: var(--border2); color: var(--text3); }
+body.light-mode #theme-btn:hover    { background: rgba(0,0,0,.04); }
+body.light-mode #live-btn           { background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.30); color: #0891b2; }
+body.light-mode #live-btn:hover     { background: rgba(8,145,178,0.14); }
+body.light-mode #live-btn.active    { background: rgba(8,145,178,0.16); }
+body.light-mode .cal-day            { background:#e8eaef; border-color: transparent; }
+body.light-mode .cal-day:hover      { background:#dde0e6; }
+body.light-mode .cal-day .cal-dw,
+body.light-mode .cal-day .cal-dn,
+body.light-mode .cal-day .cal-mo    { color: #999; }
+body.light-mode .cal-day.has-matches{ border-color: var(--border2); }
+body.light-mode .cal-day.has-matches .cal-dn { color: var(--text2); }
+body.light-mode .cal-day.today .cal-dn { color: var(--accent); }
 body.light-mode .cal-day.selected   { background: rgba(8,145,178,0.10); border-color: rgba(8,145,178,0.35); }
-body.light-mode .cal-day.selected .cal-dn { color: #0891b2; }
-body.light-mode #nav-controls       { border-top-color: rgba(10,30,80,0.10) !important; }
-body.light-mode .zoom-btn           { color: #4a5878; border-color: rgba(10,30,80,0.15); }
-body.light-mode .zoom-btn:hover     { color: #1e2a4a; background: rgba(10,30,80,0.05); border-color: rgba(10,30,80,0.22); }
-body.light-mode .zoom-btn.active    { color: #0891b2; background: rgba(8,145,178,0.10); border-color: rgba(8,145,178,0.35); }
-body.light-mode .vm-btn             { color: #4a5878; border-color: rgba(10,30,80,0.15); }
-body.light-mode .vm-btn:hover       { color: #1e2a4a; background: rgba(10,30,80,0.05); }
-body.light-mode .vm-btn.active      { color: #0891b2; background: rgba(8,145,178,0.10); border-color: rgba(8,145,178,0.35); }
-body.light-mode #collapse-all-btn   { color: #4a5878; border-color: rgba(10,30,80,0.15); }
-body.light-mode #collapse-all-btn:hover { color: #1e2a4a; background: rgba(10,30,80,0.05); }
-body.light-mode .svc-chip           { color: #4a5878; border-color: rgba(10,30,80,0.15); }
-body.light-mode .svc-chip:hover     { background: rgba(10,30,80,0.05); color: #1e2a4a; }
-body.light-mode .svc-chip.active    { color: #0891b2; border-color: rgba(8,145,178,0.35); background: rgba(8,145,178,0.08); }
-body.light-mode #filter-panel.open  { border-top-color: rgba(10,30,80,0.10) !important; }
-body.light-mode #filter-reset       { color: #4a5878; }
-body.light-mode .filter-sep         { background: rgba(10,30,80,0.12); }
-body.light-mode #scroll-mirror-wrap { border-top-color: rgba(10,30,80,0.12); background: #f0f5fc; }
+body.light-mode .cal-day.selected .cal-dw,
+body.light-mode .cal-day.selected .cal-dn,
+body.light-mode .cal-day.selected .cal-mo { color: var(--accent); }
+body.light-mode #nav-controls       { border-top-color: var(--border) !important; }
+body.light-mode .zoom-btn           { color: var(--text3); border-color: var(--border2); }
+body.light-mode .zoom-btn:hover     { color: var(--text); background: rgba(0,0,0,.04); border-color: var(--border2); }
+body.light-mode .zoom-btn.active    { color: var(--accent); background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.30); }
+body.light-mode .vm-btn             { color: var(--text3); border-color: var(--border2); }
+body.light-mode .vm-btn:hover       { color: var(--text); background: rgba(0,0,0,.04); }
+body.light-mode .vm-btn.active      { color: var(--accent); background: rgba(8,145,178,0.08); border-color: rgba(8,145,178,0.30); }
+body.light-mode #collapse-all-btn   { color: var(--text3); border-color: var(--border2); }
+body.light-mode #collapse-all-btn:hover { color: var(--text); background: rgba(0,0,0,.04); }
+body.light-mode .svc-chip           { color: var(--text3); border-color: var(--border2); }
+body.light-mode .svc-chip:hover     { background: rgba(0,0,0,.04); color: var(--text); }
+body.light-mode .svc-chip.active    { color: var(--accent); border-color: rgba(8,145,178,0.35); background: rgba(8,145,178,0.08); }
+body.light-mode #filter-panel.open  { border-top-color: var(--border) !important; }
+body.light-mode #filter-reset       { color: var(--text3); }
+body.light-mode .filter-sep         { background: var(--border2); }
+body.light-mode #scroll-mirror-wrap { border-top-color: var(--border); background: var(--nav); }
 
-/* LIGHT MODE — CONTENT AREA
-   Inline styles from CH_COLORS use hardcoded dark values — !important needed to override them */
-body.light-mode .row-label        { background:var(--s1)  !important; box-shadow:6px 0 10px rgba(0,0,0,.10); }
-body.light-mode .time-axis-label  { background:var(--s1)  !important; box-shadow:6px 0 10px rgba(0,0,0,.10); }
-body.light-mode .svc-label        { background:var(--s2)  !important; box-shadow:6px 0 10px rgba(0,0,0,.10); }
-body.light-mode .feed-label       { background:var(--s3)  !important; box-shadow:6px 0 10px rgba(0,0,0,.10); border-left:2px solid rgba(10,30,80,0.12) !important; }
-body.light-mode .service-row      { background:var(--s2)  !important; }
-body.light-mode .feed-row         { background:var(--s3)  !important; }
-body.light-mode .svc-track        { background:var(--s2)  !important; }
-body.light-mode .feed-track       { background:var(--s3)  !important; }
-body.light-mode .svc-name         { color:var(--text)     !important; }
-body.light-mode .feed-name        { color:var(--text2)    !important; }
+/* LIGHT MODE — CONTENT AREA (Steel inverted) */
+body.light-mode .row-label        { background:var(--s1)        !important; box-shadow:6px 0 8px rgba(0,0,0,.07); }
+body.light-mode .time-axis-label  { background:var(--s1)        !important; box-shadow:6px 0 8px rgba(0,0,0,.07); }
+body.light-mode .svc-label        { background:var(--s2)        !important; box-shadow:6px 0 8px rgba(0,0,0,.07); }
+body.light-mode .feed-label       { background:var(--s3)        !important; box-shadow:6px 0 8px rgba(0,0,0,.07); border-left:2px solid var(--border) !important; }
+body.light-mode .service-row      { background:var(--s2)        !important; }
+body.light-mode .feed-row         { background:var(--s3)        !important; }
+body.light-mode .svc-track        { background:var(--track-even) !important; }
+body.light-mode .feed-track       { background:var(--track-even) !important; }
+body.light-mode .svc-name         { color:var(--label-text-muted) !important; }
+body.light-mode .feed-name        { color:var(--label-text-muted) !important; }
 body.light-mode .timeline-container { background:var(--s1); }
-body.light-mode .gl               { background:rgba(0,0,0,.06); }
-body.light-mode .match-row:hover  { background:rgba(0,0,0,.03); }
+body.light-mode .time-axis        { background:var(--s1); border-color:var(--border); }
+body.light-mode .time-tick        { color:var(--text3); border-left-color:var(--border); }
+body.light-mode .gl               { background:rgba(0,0,0,.04); }
+body.light-mode .match-row:hover  { background:rgba(0,0,0,.02); }
 body.light-mode .md1-group-header { background:rgba(0,0,0,.02); }
 body.light-mode .md1-group-header:hover { background:rgba(0,0,0,.04); }
+/* Blocks: neutral bg, colored border-top */
+body.light-mode .match-block      { background:var(--block-bg)  !important; }
+body.light-mode .svc-block        { background:var(--block-bg)  !important; }
+body.light-mode .feed-block       { background:var(--block-bg)  !important; }
+body.light-mode .svc-block-pre    { background:var(--block-bg)  !important; opacity:.6 !important; }
+body.light-mode .match-block .block-teams,
+body.light-mode .match-block .block-ko { color:var(--block-text) !important; }
+body.light-mode .svc-block-label  { color:var(--block-text) !important; text-shadow:none; }
+body.light-mode .feed-block-label { color:var(--block-text-sub) !important; text-shadow:none; }
 /* Tooltip */
-body.light-mode .tooltip  { background:#fff;border-color:rgba(0,0,0,.15);box-shadow:0 4px 24px rgba(0,0,0,.15); }
+body.light-mode .tooltip  { background:#fff;border-color:rgba(0,0,0,.12);box-shadow:0 4px 20px rgba(0,0,0,.12); }
 body.light-mode .tt-head  { color:#1a1d2e; }
 body.light-mode .tt-k     { color:#8a92b0; }
 body.light-mode .tt-v     { color:#1a1d2e; }
-body.light-mode .tt-div   { border-color:rgba(0,0,0,.1); }
+body.light-mode .tt-div   { border-color:rgba(0,0,0,.08); }
 body.light-mode #now-label { background:rgba(20,25,45,.9); }
-/* Light mode: brightness solo en el fondo (::before hereda el color), texto sin filtrar */
-body.light-mode .match-block::before,
-body.light-mode .svc-block::before,
-body.light-mode .feed-block::before {
-    content:'';position:absolute;inset:0;background:inherit;filter:brightness(1.5);border-radius:inherit;z-index:0;pointer-events:none;
-}
-body.light-mode .match-block .block-teams,
-body.light-mode .match-block .block-ko { color:#fff !important; position:relative; z-index:1; }
-body.light-mode .svc-block-label  { color:#fff !important; text-shadow:0 1px 3px rgba(0,0,0,.5); }
-body.light-mode .feed-block-label { color:#fff !important; text-shadow:0 1px 3px rgba(0,0,0,.6),-1px 0 2px rgba(0,0,0,.4); }
 
 /* ── EXCEL LOAD OVERLAY ─────────────────────────────────────────── */
-#xl-overlay{position:fixed;inset:0;z-index:9900;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
+#xl-overlay{position:fixed;inset:0;z-index:10001;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
 #xl-overlay.hidden{display:none;}
 .xl-card{background:var(--s1);border:1px solid var(--border2);border-radius:8px;padding:32px 36px;width:420px;max-width:95vw;}
 .xl-title{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
@@ -312,6 +331,15 @@ body.light-mode .feed-block-label { color:#fff !important; text-shadow:0 1px 3px
 .xl-btn:disabled{opacity:.35;cursor:not-allowed;}
 .xl-demo{width:100%;margin-top:6px;padding:7px;background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;}
 .xl-demo:hover{background:rgba(128,128,128,.08);color:var(--text2);}
+.xl-sep{display:flex;align-items:center;gap:8px;margin:14px 0 10px;color:var(--text3);font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+.xl-sep::before,.xl-sep::after{content:'';flex:1;height:1px;background:var(--border);}
+.xl-section{font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.xl-opt{font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--text3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;}
+.xl-req{font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--accent);border:1px solid rgba(34,211,238,.35);border-radius:3px;padding:1px 5px;}
+.xl-divider{height:1px;background:var(--border);margin:16px 0;}
+.xl-paste{width:100%;min-height:68px;resize:vertical;background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:9px 11px;font-size:11px;color:var(--text2);font-family:'SF Mono','Consolas',monospace;outline:none;box-sizing:border-box;transition:border-color .15s;}
+.xl-paste:focus{border-color:var(--accent);}
+.xl-paste::placeholder{color:var(--text3);font-family:inherit;}
 .xl-hint{font-size:10px;color:var(--text3);margin-top:14px;line-height:1.5;border-top:1px solid var(--border);padding-top:12px;}
 #xl-reload-btn{background:transparent;border:1px solid var(--border);color:var(--text3);font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:3px;cursor:pointer;transition:background .12s,color .12s;}
 #xl-reload-btn:hover{background:rgba(128,128,128,.08);color:var(--text2);}
@@ -322,15 +350,34 @@ body.light-mode .feed-block-label { color:#fff !important; text-shadow:0 1px 3px
 <!-- EXCEL LOAD OVERLAY -->
 <div id="xl-overlay" class="hidden">
   <div class="xl-card">
-    <div class="xl-title">FWC26 — TX Schedule</div>
-    <div class="xl-sub">Load the schedule data file to begin. Drag &amp; drop or click to browse.</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+      <div class="xl-title" style="margin-bottom:0;">FWC26 — TX Schedule</div>
+      <button id="xl-close-btn" onclick="hideXlOverlay()" style="display:none;background:none;border:none;color:var(--text3);font-size:18px;line-height:1;cursor:pointer;padding:0 0 0 12px;" title="Close">×</button>
+    </div>
+    <div class="xl-sub">Load data files to begin. Config defines services &amp; settings. Match schedule provides fixtures.</div>
+
+    <div class="xl-section">Config file <span class="xl-opt">optional</span></div>
+    <div class="xl-drop" id="xl-drop-cfg">
+      <input type="file" id="xl-file-cfg" accept=".xlsx,.xls" onchange="handleCfgFile(this)">
+      <div class="xl-drop-label">
+        <strong>FWC26_TX_Input_v3.xlsx <span class="xl-status" id="xl-cfg-status"></span></strong>
+        Services · Feeds · Subtasks · Settings
+      </div>
+    </div>
+
+    <div class="xl-divider"></div>
+
+    <div class="xl-section">Match schedule <span class="xl-req">required</span></div>
     <div class="xl-drop" id="xl-drop-main">
       <input type="file" id="xl-file-main" accept=".xlsx,.xls,.csv,.tsv,.txt" onchange="handleXlFile(this)">
       <div class="xl-drop-label">
         <strong>Match schedule file <span class="xl-status" id="xl-file-status"></span></strong>
-        Accepts: source schedule Excel/CSV or full TX Input (.xlsx)
+        Source Excel/CSV or paste from Excel below
       </div>
     </div>
+    <div class="xl-sep">or paste from Excel</div>
+    <textarea class="xl-paste" id="xl-paste-area" placeholder="Select all rows in Excel (including header) → Ctrl+C → Ctrl+V here" spellcheck="false"></textarea>
+
     <button class="xl-btn" id="xl-load-btn" disabled onclick="applyLoadedData()">Load Schedule</button>
     <button class="xl-demo" onclick="useDemoData()">Use Demo Data (MD1–MD8)</button>
     <div class="xl-hint">
@@ -420,8 +467,8 @@ function calcDayBounds(dayMatches, md1Matches){
   });
   if(allM.length===0){ minH=GLOBAL_START_H; maxH=GLOBAL_END_H; }
   // Floor to nearest 30min with 15min padding, cap end at 26 (allows post-midnight)
-  const startH=Math.max(0,   Math.floor((minH - 0.25) * 2) / 2);
-  const endH  =Math.min(26,  Math.ceil ((maxH + 0.25) * 2) / 2);
+  const startH=Math.min(6.5, Math.max(0, Math.floor((minH - 0.25) * 2) / 2));
+  const endH  =Math.max(27,  Math.ceil ((maxH + 0.25) * 2) / 2);
   return {startH, endH, span:endH-startH};
 }
 
@@ -449,25 +496,25 @@ function hhmmLabel(h){
 }
 
 const CH_COLORS={
-  'Match A':{ full:'#1a3a5c', svc:'#122840', feed:'#0d1e30', svcDim:'#1a3a5c99', feedDim:'#1a3a5c77', text:'#7dbfff', pip:'#7dbfff', ko:'rgba(125,191,255,0.45)' },
-  'Match B':{ full:'#0f3d2c', svc:'#0a2a1e', feed:'#071a12', svcDim:'#0f3d2c99', feedDim:'#0f3d2c77', text:'#5dd4a0', pip:'#5dd4a0', ko:'rgba(93,212,160,0.45)' },
-  'Match C':{ full:'#2e1f4a', svc:'#1e1432', feed:'#140d22', svcDim:'#2e1f4a99', feedDim:'#2e1f4a77', text:'#b89cff', pip:'#b89cff', ko:'rgba(184,156,255,0.45)' },
-  'Match D':{ full:'#3d1f10', svc:'#2a1408', feed:'#1a0d04', svcDim:'#3d1f1099', feedDim:'#3d1f1077', text:'#ff9e6a', pip:'#ff9e6a', ko:'rgba(255,158,106,0.45)' },
-  'Match E':{ full:'#1a3d38', svc:'#122a26', feed:'#0d1a18', svcDim:'#1a3d3899', feedDim:'#1a3d3877', text:'#5de0cf', pip:'#5de0cf', ko:'rgba(93,224,207,0.45)' },
-  'Match F':{ full:'#3d1a2e', svc:'#2a1020', feed:'#1a0814', svcDim:'#3d1a2e99', feedDim:'#3d1a2e77', text:'#ff7abf', pip:'#ff7abf', ko:'rgba(255,122,191,0.45)' },
+  'Match A':{ full:'#252830', svc:'#1e2028', pip:'#60a8ff', text:'#c0d4f0', ko:'rgba(96,168,255,0.5)' },
+  'Match B':{ full:'#252830', svc:'#1e2028', pip:'#44dd88', text:'#a0eec0', ko:'rgba(68,221,136,0.5)' },
+  'Match C':{ full:'#252830', svc:'#1e2028', pip:'#ff6644', text:'#ffb0a0', ko:'rgba(255,102,68,0.5)' },
+  'Match D':{ full:'#252830', svc:'#1e2028', pip:'#ffaa22', text:'#ffd488', ko:'rgba(255,170,34,0.5)' },
+  'Match E':{ full:'#252830', svc:'#1e2028', pip:'#cc44ff', text:'#e8aaff', ko:'rgba(204,68,255,0.5)' },
+  'Match F':{ full:'#252830', svc:'#1e2028', pip:'#ff4466', text:'#ffaabc', ko:'rgba(255,68,102,0.5)' },
 };
 
 // Feed/service stops = minutes after Final Whistle (FW = KO + match.dur).
 // Feed/service starts = minutes before/after KO (negative = before KO).
 const DEMO_SERVICES=[
-  {id:"digitalcon_0", name:"Digital Content Live", start:-150, stop:65, feeds:[{"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"ESF", "subtasks":[], "start":-90, "stop":15}, {"name":"MD-1 PC", "subtasks":[], "individual":true}, {"name":"MD-1 Training", "subtasks":[], "individual":true}]},
-  {id:"dclantipir_1", name:"DCL AntiPiracy", start:-90, stop:15, feeds:[{"name":"ESF", "subtasks":[], "start":-90, "stop":15}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}]},
-  {id:"fco_2", name:"FCO", start:-45, stop:15, feeds:[{"name":"WF", "subtasks":[{"name":"Frontend Available to FIFA", "offset":-15}, {"name":"SRT stream available", "offset":-45}], "start":-90, "stop":15}]},
-  {id:"ris_3", name:"RIS", start:-45, stop:60, feeds:[{"name":"WF", "subtasks":[{"name":"WebRTC available to MP's", "offset":-15}, {"name":"SRT available to MP's", "offset":-45}], "start":-90, "stop":15}, {"name":"Fan & Reaction", "subtasks":[{"name":"WebRTC available to MP's", "offset":-15}, {"name":"SRT available to MP's", "offset":-45}], "start":-120, "stop":60}]},
-  {id:"datatainme_4", name:"Datatainment", start:-45, stop:15, feeds:[{"name":"Datatainment", "subtasks":[], "start":-90, "stop":15}]},
-  {id:"matchbuddy_5", name:"Match Buddy", start:-150, stop:65, feeds:[{"name":"MP UNI", "subtasks":[], "start":-60, "stop":15}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"ISO 9 Tactical Main", "subtasks":[], "start":-60, "stop":20}, {"name":"ISO 10 Player A", "subtasks":[], "start":-10, "stop":10, "activeFrom":"13/06/2026"}, {"name":"ISO 11 Player B", "subtasks":[], "start":-10, "stop":10, "activeFrom":"13/06/2026"}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"ISO 1", "subtasks":[], "start":-30, "stop":20}, {"name":"ISO 6 Cable Cam", "subtasks":[], "start":-70, "stop":20}]},
-  {id:"automatedc_6", name:"Automated Content Creation (WSC)", start:-150, stop:65, feeds:[{"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"MD-1 PC", "subtasks":[], "individual":true}, {"name":"MD-1 Training", "subtasks":[], "individual":true}]},
-  {id:"closedcapt_7", name:"Closed Captions", start:-90, stop:15, feeds:[{"name":"WF", "subtasks":[], "start":-90, "stop":15}]}
+  {id:"digitalcon_0", name:"Digital Content Live", start:-150, stop:65, available:-90, milestones:[], feeds:[{"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"ESF", "subtasks":[], "start":-90, "stop":15}, {"name":"MD-1 PC", "subtasks":[], "individual":true}, {"name":"MD-1 Training", "subtasks":[], "individual":true}]},
+  {id:"dclantipir_1", name:"DCL AntiPiracy", start:-90, stop:15, available:-90, milestones:[], feeds:[{"name":"ESF", "subtasks":[], "start":-90, "stop":15}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}]},
+  {id:"fco_2", name:"FCO", start:-45, stop:15, available:-15, milestones:[{"name":"FCO pre-flight complete","offset":-45}], feeds:[{"name":"WF", "subtasks":[{"name":"Frontend Available to FIFA", "offset":-15}, {"name":"SRT stream available", "offset":-45}], "start":-90, "stop":15}]},
+  {id:"ris_3", name:"RIS", start:-45, stop:60, available:-15, milestones:[{"name":"RIS pre-flight complete","offset":-45}], feeds:[{"name":"WF", "subtasks":[{"name":"WebRTC available to MP's", "offset":-15}, {"name":"SRT available to MP's", "offset":-45}], "start":-90, "stop":15}, {"name":"Fan & Reaction", "subtasks":[{"name":"WebRTC available to MP's", "offset":-15}, {"name":"SRT available to MP's", "offset":-45}], "start":-120, "stop":60}]},
+  {id:"datatainme_4", name:"Datatainment", start:-45, stop:15, available:-45, milestones:[], feeds:[{"name":"Datatainment", "subtasks":[], "start":-90, "stop":15}]},
+  {id:"matchbuddy_5", name:"Match Buddy", start:-150, stop:65, available:-60, milestones:[], feeds:[{"name":"MP UNI", "subtasks":[], "start":-60, "stop":15}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"ISO 9 Tactical Main", "subtasks":[], "start":-60, "stop":20}, {"name":"ISO 10 Player A", "subtasks":[], "start":-10, "stop":10, "activeFrom":"13/06/2026"}, {"name":"ISO 11 Player B", "subtasks":[], "start":-10, "stop":10, "activeFrom":"13/06/2026"}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"ISO 1", "subtasks":[], "start":-30, "stop":20}, {"name":"ISO 6 Cable Cam", "subtasks":[], "start":-70, "stop":20}]},
+  {id:"automatedc_6", name:"Automated Content Creation (WSC)", start:-150, stop:65, available:-90, milestones:[], feeds:[{"name":"Team A", "subtasks":[], "start":-150, "stop":65}, {"name":"Team B", "subtasks":[], "start":-150, "stop":65}, {"name":"Fan & Reaction", "subtasks":[], "start":-120, "stop":60}, {"name":"WF", "subtasks":[], "start":-90, "stop":15}, {"name":"MD-1 PC", "subtasks":[], "individual":true}, {"name":"MD-1 Training", "subtasks":[], "individual":true}]},
+  {id:"closedcapt_7", name:"Closed Captions", start:-90, stop:15, available:-90, milestones:[], feeds:[{"name":"WF", "subtasks":[], "start":-90, "stop":15}]}
 ];
 
 const DEMO_MATCHES=[
@@ -711,7 +758,7 @@ const legendEl=document.getElementById('legend');
 Object.entries(CH_COLORS).forEach(([ch,c])=>{
   const used=matches.some(m=>m.ch===ch);
   if(!used) return;
-  legendEl.insertAdjacentHTML('beforeend',`<div class="legend-ch" style="display:flex;align-items:center;gap:6px;font-size:10px;color:${c.text};letter-spacing:.04em;"><div style="width:14px;height:14px;border-radius:3px;background:${c.full};--lc:${c.pip};flex-shrink:0;"></div>${ch}</div>`);
+  legendEl.insertAdjacentHTML('beforeend',`<div class="legend-ch" style="display:flex;align-items:center;gap:6px;font-size:10px;color:${c.pip};letter-spacing:.04em;"><div style="width:14px;height:14px;border-radius:3px;background:${c.full};--lc:${c.pip};flex-shrink:0;"></div>${ch}</div>`);
 });
 legendEl.insertAdjacentHTML('beforeend',`<span class="legend-sep"></span><span style="font-size:10px;color:var(--text3);">▶ click match to expand</span>`);
 
@@ -811,8 +858,20 @@ allDays.forEach(day=>{
     let servicesHtml='';
     SERVICES.forEach(svc=>{
       const svStartH=koH+svc.start/60, svEndH=fwH+svc.stop/60;
-      const svL=pct(svStartH).toFixed(2), svW=(pct(svEndH)-pct(svStartH)).toFixed(2);
-      const svStartLabel=hhmm(svStartH), svEndLabel=hhmmLabel(svEndH);
+      const svAvailH=koH+(svc.available!=null?svc.available:svc.start)/60;
+      const hasPre=svAvailH>svStartH;
+      const svPreL=pct(svStartH).toFixed(2), svPreW=(pct(svAvailH)-pct(svStartH)).toFixed(2);
+      const svAvailL=pct(svAvailH).toFixed(2), svAvailW=(pct(svEndH)-pct(svAvailH)).toFixed(2);
+      const svStartLabel=hhmm(svStartH), svEndLabel=hhmmLabel(svEndH), svAvailLabel=hhmm(svAvailH);
+      let milestoneHtml='';
+      if(svc.milestones&&svc.milestones.length){
+        svc.milestones.forEach(ms=>{
+          const msH=koH+ms.offset/60;
+          if(msH<svStartH||msH>svEndH) return;
+          const msL=pct(msH).toFixed(2);
+          milestoneHtml+=`<div class="milestone-marker" data-label="${ms.name}" data-ibc="${hhmm(msH)}" data-offset="${ms.offset>0?'+':''}${ms.offset}min" data-ch="${match.ch}" style="left:${msL}%;background:${c.pip};"></div>`;
+        });
+      }
       let feedsHtml='';
       svc.feeds.forEach(f=>{
         // P2: skip feeds not yet active for this match date
@@ -865,7 +924,7 @@ allDays.forEach(day=>{
             data-svc-name="${svc.name}"
             data-ch="${match.ch}">
             <div class="feed-label"><div class="feed-pip" style="background:${c.pip};"></div><span class="feed-name">${f.name}</span></div>
-            <div class="feed-track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};position:relative;">${innerBlockHtml}${subtaskHtml}<span class="feed-block-label" style="color:rgba(255,255,255,.92);position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;">${f.name}</span></div></div>
+            <div class="feed-track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};border-top:2px solid ${c.pip}55;position:relative;">${innerBlockHtml}${subtaskHtml}<span class="feed-block-label" style="color:${c.text};position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;">${f.name}</span></div></div>
           </div>`;
         }
       });
@@ -874,20 +933,24 @@ allDays.forEach(day=>{
         <div class="svc-group">
           <div class="service-row" onclick="toggleSvc(this)"
             data-svc="${svc.name}" data-start="${svStartLabel}" data-end="${svEndLabel}"
+            data-available="${svAvailLabel}"
             data-offset-start="${svc.start>0?'+'+svc.start:svc.start}min"
+            data-offset-available="${(svc.available!=null?svc.available:svc.start)>0?'+'+(svc.available??svc.start):(svc.available??svc.start)}min"
             data-offset-end="${svc.stop>0?'+'+svc.stop:svc.stop}min"
             data-ko="${hhmm(koH)}" data-ch="${match.ch}" data-body="${svcId}">
             <div class="svc-label">
               <span class="svc-arrow" style="font-size:9px;color:${c.pip};transition:transform .15s;flex-shrink:0;">▶</span>
               <div class="svc-pip" style="background:${c.pip};"></div>
-              <span class="svc-name" style="color:${c.text};">${svc.name}</span>
+              <span class="svc-name" style="color:var(--label-text-muted);">${svc.name}</span>
             </div>
             <div class="svc-track">
               <div class="grid-overlay">${gridOverlay()}</div>
               <div class="ko-line" style="left:${koL}%;background:${c.ko};"></div>
-              <div class="svc-block" style="left:${svL}%;width:${svW}%;background:${c.full};">
-                <span class="svc-block-label" style="color:#fff;">${svc.name}</span>
+              ${hasPre?`<div class="svc-block-pre" style="left:${svPreL}%;width:${(pct(svEndH)-pct(svStartH)).toFixed(2)}%;background:${c.pip}18;border-top:2px solid ${c.pip}44;border-radius:3px;"></div>`:''}
+              <div class="svc-block" style="left:${svAvailL}%;width:${svAvailW}%;${hasPre?`top:10px;height:23px;`:''}background:${c.full};border-top:2px solid ${c.pip};border-radius:2px;">
+                <span class="svc-block-label" style="color:${c.text};">${svc.name}</span>
               </div>
+              ${milestoneHtml}
             </div>
           </div>
           <div class="svc-feeds-body" id="${svcId}" style="display:none;">${feedsHtml}</div>
@@ -949,14 +1012,17 @@ allDays.forEach(day=>{
         <div class="feed-track">
           <div class="grid-overlay">${gridOverlay()}</div>
           <div class="ko-line" style="left:${koL}%;background:${c.ko};"></div>
-          <div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};position:relative;">${stHtml}
-            <span class="feed-block-label" style="color:rgba(255,255,255,.92);position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;">${hhmm(fSH)}</span>
+          <div class="feed-block" style="left:${fL}%;width:${fW}%;background:${c.full};border-top:2px solid ${c.pip}55;position:relative;">${stHtml}
+            <span class="feed-block-label" style="color:${c.text};position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;">${hhmm(fSH)}</span>
           </div>
         </div>
       </div>`;
     });
 
-    matchRows+=`<div class="match-group"><div class="match-row" onclick="toggleMatch(this)" data-teams="${match.fullA} vs ${match.fullB}" data-ch="${match.ch}" data-city="${match.city}" data-ko="${hhmm(koH)}" data-end="${hhmmLabel(endH)}" data-local="${match.localKO}" data-utc="${match.utcKO}" data-tz="${match.tz}" data-train-a="${match.trainA}" data-pc-a="${match.pcA}" data-train-b="${match.trainB}" data-pc-b="${match.pcB}" data-team-a="${match.teamA}" data-team-b="${match.teamB}" data-md1="${md1Label}"><div class="row-label" style="border-left:3px solid ${c.pip};"><span class="toggle-arrow" style="color:${c.pip};">▶</span><span class="match-id">M${match.m}</span><span class="match-teams">${match.teamA} vs ${match.teamB}</span><span class="match-ch" style="color:${c.pip};">${match.ch}</span></div><div class="track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div><div class="match-block" style="left:${mL}%;width:${mW}%;background:${c.full};border-right:2px dashed ${c.text}4d;"><span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span><span class="block-ko" style="color:${c.text};">${hhmm(koH)}</span><span style="color:${c.text};opacity:.35;font-size:8px;margin-left:auto;flex-shrink:0;letter-spacing:.04em;">est.</span></div></div></div><div class="services-panel">${servicesHtml}</div><div class="feeds-panel" style="display:none;">${dedupFeedsHtml}</div></div>`;
+    // Match-level operational window: earliest service start → latest service stop
+    const _mSumEH=koH+Math.min(...SERVICES.map(s=>s.start))/60, _mSumLH=fwH+Math.max(...SERVICES.map(s=>s.stop))/60;
+    const mSumBar=`<div style="position:absolute;bottom:2px;left:${pct(_mSumEH).toFixed(2)}%;width:${(pct(_mSumLH)-pct(_mSumEH)).toFixed(2)}%;height:4px;background:${c.pip};opacity:.28;border-radius:2px;cursor:help;"></div>`;
+    matchRows+=`<div class="match-group"><div class="match-row" onclick="toggleMatch(this)" data-teams="${match.fullA} vs ${match.fullB}" data-ch="${match.ch}" data-city="${match.city}" data-ko="${hhmm(koH)}" data-end="${hhmmLabel(endH)}" data-local="${match.localKO}" data-utc="${match.utcKO}" data-tz="${match.tz}" data-train-a="${match.trainA}" data-pc-a="${match.pcA}" data-train-b="${match.trainB}" data-pc-b="${match.pcB}" data-team-a="${match.teamA}" data-team-b="${match.teamB}" data-md1="${md1Label}"><div class="row-label" style="border-left:3px solid ${c.pip};"><span class="toggle-arrow" style="color:${c.pip};">▶</span><span class="match-id">M${match.m}</span><span class="match-teams" style="color:${c.pip};">${match.teamA} vs ${match.teamB}</span><span class="match-ch" style="color:${c.pip};">${match.ch}</span></div><div class="track"><div class="grid-overlay">${gridOverlay()}</div><div class="ko-line" style="left:${koL}%;background:${c.ko};"></div>${mSumBar}<div class="match-block" style="left:${mL}%;width:${mW}%;background:${c.full};border-top:2px solid ${c.pip};"><span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span><span class="block-ko" style="color:${c.text};">${hhmm(koH)}</span></div></div></div><div class="services-panel">${servicesHtml}</div><div class="feeds-panel" style="display:none;">${dedupFeedsHtml}</div></div>`;
   });
 
   // ── MD-1 channel rows (same structure as match rows) ──
@@ -1015,8 +1081,8 @@ allDays.forEach(day=>{
             data-feed-end="${fEnd}"
             data-feed-off-start="—"
             data-feed-off-end="—"
-            data-svc-start="${hhmm(md1StartH)}"
-            data-svc-end="${hhmmLabel(md1EndH)}"
+            data-svc-start="${fStart}"
+            data-svc-end="${fEnd}"
             data-svc-off-start="—"
             data-svc-off-end="—"
             data-svc-name="${svc.name}"
@@ -1035,8 +1101,8 @@ allDays.forEach(day=>{
             </div>
             <div class="feed-track">
               <div class="grid-overlay">${gridOverlay()}</div>
-              <div class="feed-block" style="position:relative;left:${fL}%;width:${fW}%;background:${c.full};">
-                <span class="feed-block-label" style="color:#fff;">${f.name} · ${fStart}</span>
+              <div class="feed-block" style="position:relative;left:${fL}%;width:${fW}%;background:${c.full};border-top:2px solid ${c.pip}55;">
+                <span class="feed-block-label" style="color:${c.text};">${f.name} · ${fStart}</span>
               </div>
             </div>
           </div>`;
@@ -1052,7 +1118,7 @@ allDays.forEach(day=>{
               <div class="svc-label">
                 <span class="svc-arrow" style="font-size:9px;color:${c.pip};transition:transform .15s;flex-shrink:0;">▶</span>
                 <div class="svc-pip" style="background:${c.pip};"></div>
-                <span class="svc-name" style="color:${c.text};">${svc.name}</span>
+                <span class="svc-name" style="color:var(--label-text-muted);">${svc.name}</span>
               </div>
               <div class="svc-track">
                 <div class="grid-overlay">${gridOverlay()}</div>
@@ -1071,7 +1137,7 @@ allDays.forEach(day=>{
                     data-match-ko="${hhmm(match.koIBC)}"
                     data-match-venue="${match.city||'—'}"
                     data-ch="${match.ch}"
-                    style="left:${bL}%;width:${bW}%;background:${c.full};"><span class="svc-block-label" style="color:#fff;">${typeLabel}</span></div>`;
+                    style="left:${bL}%;width:${bW}%;background:${c.full};border-top:2px solid ${c.pip};"><span class="svc-block-label" style="color:${c.text};">${typeLabel}</span></div>`;
                 }).join('')}
               </div>
             </div>
@@ -1112,9 +1178,9 @@ allDays.forEach(day=>{
         chain.events.forEach(ev=>{
           const evL=pct(ev.startH).toFixed(2);
           const evW=(pct(ev.startH+ev.dur)-pct(ev.startH)).toFixed(2);
-          markers+=`<div class="feed-block" style="left:${evL}%;width:${evW}%;background:${c.full};position:absolute;top:4px;height:18px;border-radius:3px;display:flex;align-items:center;padding:0 8px;overflow:hidden;"
+          markers+=`<div class="feed-block" style="left:${evL}%;width:${evW}%;background:${c.full};border-top:2px solid ${c.pip}55;position:absolute;top:4px;height:18px;border-radius:3px;display:flex;align-items:center;padding:0 8px;overflow:hidden;"
             data-label="${ev.team} ${chain.name}" data-ibc="${hhmm(ev.startH)}">
-            <span style="font-size:10px;font-weight:600;color:#fff;white-space:nowrap;">${ev.team} ${chain.name} · ${hhmm(ev.startH)}</span>
+            <span style="font-size:10px;font-weight:600;color:${c.text};white-space:nowrap;">${ev.team} ${chain.name} · ${hhmm(ev.startH)}</span>
           </div>`;
         });
 
@@ -1153,7 +1219,7 @@ allDays.forEach(day=>{
           <div class="row-label" style="border-left:3px solid ${c.pip};">
             <span class="toggle-arrow" style="color:${c.pip};">▶</span>
             <span class="match-id" style="color:${c.pip};font-size:9px;">${md1Ch}</span>
-            <span class="match-teams">${match.teamA} vs ${match.teamB}</span>
+            <span class="match-teams" style="color:${c.pip};">${match.teamA} vs ${match.teamB}</span>
             <span class="match-ch" style="color:${c.pip};">${match.ch}</span>
           </div>
           <div class="track">
@@ -1161,7 +1227,7 @@ allDays.forEach(day=>{
             ${md1Feeds.map(f=>{
               const bL=pct(f.startH).toFixed(2);
               const bW=(pct(f.startH+f.dur)-pct(f.startH)).toFixed(2);
-              return `<div class="match-block" style="left:${bL}%;width:${bW}%;background:${c.full};">
+              return `<div class="match-block" style="left:${bL}%;width:${bW}%;background:${c.full};border-top:2px solid ${c.pip};">
                 <span class="block-teams" style="color:${c.text};">${match.teamA} vs ${match.teamB}</span>
                 <span class="block-ko" style="color:${c.text};">${nextDayLabel}</span>
               </div>`;
@@ -1286,6 +1352,18 @@ document.addEventListener('mousemove',e=>{
 
 // Tooltip target elements — use event delegation with mouseenter/mouseleave
 document.addEventListener('mouseover',e=>{
+  // Milestone marker tooltip (service-level)
+  const milestoneMarker=e.target.closest('.milestone-marker');
+  if(milestoneMarker){
+    const ch=milestoneMarker.dataset.ch||'Match A';
+    const c=CH_COLORS[ch]||CH_COLORS['Match A'];
+    showTooltip(`
+      <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${milestoneMarker.dataset.label}</div>
+      <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">SERVICE MILESTONE</span></div>
+      <div class="tt-row"><span class="tt-k">Time (IBC)</span><span class="tt-v" style="color:${c.pip};">${milestoneMarker.dataset.ibc}</span></div>
+      <div class="tt-row"><span class="tt-k">Offset</span><span class="tt-v">${milestoneMarker.dataset.offset} from KO</span></div>`);
+    return;
+  }
   // Subtask marker tooltip
   const subtaskMarker=e.target.closest('.subtask-marker');
   if(subtaskMarker){
@@ -1336,6 +1414,26 @@ document.addEventListener('mouseover',e=>{
       return;
     }
   }
+  // Svc pre-available block → same tooltip as svc-block
+  const svcBlockPre=e.target.closest('.svc-block-pre');
+  if(svcBlockPre){
+    const row=svcBlockPre.closest('.service-row');
+    if(row&&row.dataset.svc){
+      const c=CH_COLORS[row.dataset.ch]||CH_COLORS['Match A'];
+      showTooltip(`
+        <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${row.dataset.svc}</div>
+        <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">SERVICE</span></div>
+        <div class="tt-row"><span class="tt-k">Operational start (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.start}</span></div>
+        ${row.dataset.available&&row.dataset.available!==row.dataset.start?`<div class="tt-row"><span class="tt-k">Available to stakeholders</span><span class="tt-v" style="color:${c.pip};">${row.dataset.available}</span></div>`:''}
+        <div class="tt-row"><span class="tt-k">KO (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.ko}</span></div>
+        <div class="tt-row"><span class="tt-k">Service end (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.end}</span></div>
+        <div class="tt-div"></div>
+        <div class="tt-row"><span class="tt-k">Start offset</span><span class="tt-v">${row.dataset.offsetStart} from KO</span></div>
+        ${row.dataset.offsetAvailable&&row.dataset.offsetAvailable!==row.dataset.offsetStart?`<div class="tt-row"><span class="tt-k">Available offset</span><span class="tt-v">${row.dataset.offsetAvailable} from KO</span></div>`:''}
+        <div class="tt-row"><span class="tt-k">End offset</span><span class="tt-v">${row.dataset.offsetEnd} from FW</span></div>`);
+      return;
+    }
+  }
   // Svc block
   const svcBlock=e.target.closest('.svc-block');
   if(svcBlock){
@@ -1361,16 +1459,21 @@ document.addEventListener('mouseover',e=>{
       showTooltip(`
         <div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${row.dataset.svc}</div>
         <div class="tt-row" style="margin-bottom:3px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">SERVICE</span></div>
+        <div class="tt-row"><span class="tt-k">Operational start (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.start}</span></div>
+        ${row.dataset.available&&row.dataset.available!==row.dataset.start?`<div class="tt-row"><span class="tt-k">Available to stakeholders</span><span class="tt-v" style="color:${c.pip};">${row.dataset.available}</span></div>`:''}
         <div class="tt-row"><span class="tt-k">KO (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.ko}</span></div>
-        <div class="tt-row"><span class="tt-k">Service start (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.start}</span></div>
         <div class="tt-row"><span class="tt-k">Service end (IBC)</span><span class="tt-v" style="color:${c.pip};">${row.dataset.end}</span></div>
+        <div class="tt-div"></div>
         <div class="tt-row"><span class="tt-k">Start offset</span><span class="tt-v">${row.dataset.offsetStart} from KO</span></div>
+        ${row.dataset.offsetAvailable&&row.dataset.offsetAvailable!==row.dataset.offsetStart?`<div class="tt-row"><span class="tt-k">Available offset</span><span class="tt-v">${row.dataset.offsetAvailable} from KO</span></div>`:''}
         <div class="tt-row"><span class="tt-k">End offset</span><span class="tt-v">${row.dataset.offsetEnd} from FW</span></div>`);
       return;
     }
   }
+  // Tooltip on match rows only fires over the colored block or the row label — not the empty track
+  const onBlockOrLabel=e.target.closest('.match-block,.row-label');
   // MD-1 match row
-  const md1Row=e.target.closest('.match-row.md1-row');
+  const md1Row=onBlockOrLabel&&e.target.closest('.match-row.md1-row');
   if(md1Row&&md1Row.dataset.teams){
     const c=CH_COLORS[md1Row.dataset.ch]||CH_COLORS['Match A'];
     showTooltip(`
@@ -1389,8 +1492,8 @@ document.addEventListener('mouseover',e=>{
       <div class="tt-row"><span class="tt-k">KO (IBC)</span><span class="tt-v" style="color:${c.pip};">${md1Row.dataset.matchKo}</span></div>`);
     return;
   }
-  // Match row
-  const matchRow=e.target.closest('.match-row:not(.md1-row)');
+  // Main match row
+  const matchRow=onBlockOrLabel&&e.target.closest('.match-row:not(.md1-row)');
   if(matchRow&&matchRow.dataset.teams){
     const c=CH_COLORS[matchRow.dataset.ch]||CH_COLORS['Match A'];
     showTooltip(`<div class="tt-head"><span class="tt-ch-dot" style="background:${c.full};border:1px solid ${c.pip};"></span>${matchRow.dataset.teams}</div><div class="tt-row"><span class="tt-k">Channel</span><span class="tt-v" style="color:${c.pip}">${matchRow.dataset.ch}</span></div><div class="tt-row"><span class="tt-k">City</span><span class="tt-v">${matchRow.dataset.city}</span></div><div class="tt-row"><span class="tt-k">KO (IBC)</span><span class="tt-v" style="color:${c.pip};">${matchRow.dataset.ko}</span></div><div class="tt-row"><span class="tt-k">Est. end (IBC)</span><span class="tt-v">${matchRow.dataset.end}</span></div><div class="tt-div"></div><div class="tt-row" style="margin-bottom:4px;"><span class="tt-k" style="color:var(--accent);font-size:9px;letter-spacing:.06em;">MD-1 &nbsp;(${matchRow.dataset.md1})</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamA} training</span><span class="tt-v">${matchRow.dataset.trainA}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamA} PC</span><span class="tt-v">${matchRow.dataset.pcA}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamB} training</span><span class="tt-v">${matchRow.dataset.trainB}</span></div><div class="tt-row"><span class="tt-k">${matchRow.dataset.teamB} PC</span><span class="tt-v">${matchRow.dataset.pcB}</span></div>`);
@@ -1400,7 +1503,7 @@ document.addEventListener('mouseover',e=>{
 });
 
 document.addEventListener('mouseout',e=>{
-  const leaving=e.target.closest('.md1-block,.feed-block,.svc-block,.match-row,.subtask-marker');
+  const leaving=e.target.closest('.md1-block,.feed-block,.svc-block,.svc-block-pre,.match-row,.subtask-marker,.milestone-marker');
   if(!leaving) return;
   const to=e.relatedTarget;
   if(to&&leaving.contains(to)) return;
@@ -1426,14 +1529,20 @@ function updateNowLine(){
   navClock.textContent=label;
 
   // Move all now-lines using per-section bounds
+  const todayKey=getIBCDateKey();
   let globalInRange=false;
   document.querySelectorAll('.day-section').forEach(sec=>{
     const sH=parseFloat(sec.dataset.startH);
     const sP=parseFloat(sec.dataset.span);
     if(isNaN(sH)||isNaN(sP)) return;
-    const inRange=ibcH>=sH&&ibcH<=(sH+sP);
-    if(inRange) globalInRange=true;
-    const leftPct=inRange?((ibcH-sH)/sP*100).toFixed(3)+'%':'-9999px';
+    // Post-midnight: 0-6h IBC maps to 24-30h on a timeline that extends past midnight
+    const ibcHAdj=(ibcH<6&&(sH+sP)>24)?ibcH+24:ibcH;
+    const inRange=ibcHAdj>=sH&&ibcHAdj<=(sH+sP);
+    // Pre-show: we're before 6:30 and it's today's visible section
+    const isVisibleToday=sec.style.display!=='none'&&sec.dataset.date===todayKey;
+    const isPre=!inRange&&ibcHAdj<sH&&isVisibleToday;
+    if(inRange||isPre) globalInRange=true;
+    const leftPct=inRange?((ibcHAdj-sH)/sP*100).toFixed(3)+'%':isPre?'0.15%':'-9999px';
     sec.querySelectorAll('.now-line').forEach(el=>{
       el.style.left=nowVisible?leftPct:'-9999px';
     });
@@ -1828,16 +1937,61 @@ function syncAllStickyLabels(){
 
 // ── EXCEL LOAD OVERLAY ────────────────────────────────────────────────────────
 
-let _parsedXlData = null; // holds { services, matches } after file parse
+let _parsedXlData = null;  // { services, matches, settings } from match schedule file
+let _parsedConfig = null;  // { services, settings } from config file (optional)
 
 function showXlOverlay(){
   document.getElementById('xl-overlay').classList.remove('hidden');
+  document.getElementById('xl-close-btn').style.display = 'block';
 }
 function hideXlOverlay(){
   document.getElementById('xl-overlay').classList.add('hidden');
 }
 
-// Drag-over styling
+// ── Config file drop zone ────────────────────────────────────────────────────
+const xlDropCfg = document.getElementById('xl-drop-cfg');
+['dragover','dragenter'].forEach(ev => xlDropCfg.addEventListener(ev, e => { e.preventDefault(); xlDropCfg.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(ev => xlDropCfg.addEventListener(ev, () => xlDropCfg.classList.remove('drag-over')));
+xlDropCfg.addEventListener('drop', e => { e.preventDefault(); const f=e.dataTransfer?.files?.[0]; if(f) parseCfgFile(f); });
+
+function handleCfgFile(input){ const f=input.files?.[0]; if(f) parseCfgFile(f); }
+
+function setCfgStatus(ok, msg){
+  const el=document.getElementById('xl-cfg-status');
+  el.textContent=msg; el.className='xl-status '+(ok?'ok':'err');
+}
+
+function parseCfgFile(file){
+  setCfgStatus(false,'⟳ reading…');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const result=parseConfigOnly(wb);
+      if(result.error){ setCfgStatus(false,'✕ '+result.error); return; }
+      _parsedConfig=result;
+      try {
+        localStorage.setItem('fwc26_services', JSON.stringify(result.services));
+        localStorage.setItem('fwc26_settings', JSON.stringify(result.settings||{}));
+      } catch(e){ console.warn('localStorage save failed:', e); }
+      setCfgStatus(true,'✓ '+result.services.length+' services · loading…');
+      setTimeout(()=>{ hideXlOverlay(); window.location.reload(); }, 400);
+    } catch(err){ setCfgStatus(false,'✕ '+(err.message||String(err))); console.error(err); }
+  };
+  reader.onerror=()=>setCfgStatus(false,'✕ file error');
+  reader.readAsArrayBuffer(file);
+}
+
+function parseConfigOnly(wb){
+  if(!wb.SheetNames.includes('Services'))
+    return {error:'No "Services" sheet — load the config file (FWC26_TX_Input_v3.xlsx)'};
+  const result=parseWorkbook(wb,{requireMatches:false});
+  if(!result.services||!result.services.length)
+    return {error:'No services found in config file'};
+  return {services:result.services, settings:result.settings||{}};
+}
+
+// ── Match schedule drop zone ─────────────────────────────────────────────────
 const xlDrop = document.getElementById('xl-drop-main');
 ['dragover','dragenter'].forEach(ev => xlDrop.addEventListener(ev, e => { e.preventDefault(); xlDrop.classList.add('drag-over'); }));
 ['dragleave','drop'].forEach(ev => xlDrop.addEventListener(ev, () => xlDrop.classList.remove('drag-over')));
@@ -1851,6 +2005,22 @@ function handleXlFile(input){
   const file = input.files?.[0];
   if(file) parseXlFile(file);
 }
+
+document.getElementById('xl-paste-area').addEventListener('paste', function(e){
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if(!text || !text.trim()) return;
+  try {
+    const wb = XLSX.read(text, {type:'string', raw:true, FS:'\t'});
+    const result = parseWorkbook(wb);
+    if(result.error){ setFileStatus(false, '✕ ' + result.error); return; }
+    _parsedXlData = result;
+    this.value = '';
+    setFileStatus(true, '✓ ' + result.matches.length + ' matches');
+  } catch(err){
+    setFileStatus(false, '✕ ' + (err.message || String(err)));
+  }
+});
 
 function setFileStatus(ok, msg){
   const el = document.getElementById('xl-file-status');
@@ -1889,7 +2059,7 @@ function parseXlFile(file){
 
 // ── Workbook parser ──────────────────────────────────────────────────────────
 
-function parseWorkbook(wb){
+function parseWorkbook(wb, {requireMatches=true}={}){
   const sheetNames = wb.SheetNames;
 
   // ── Inner helpers ─────────────────────────────────────────────────
@@ -1961,16 +2131,18 @@ function parseWorkbook(wb){
   const matchDurMin=num(settings['match_duration_min'])||105;
 
   // ── Services + Feeds + Subtasks (optional — fall back to DEMO_SERVICES) ──
-  // Services columns: 0=name, 1=start_offset(min from KO), 2=stop_offset(min from FW), 3=notes
+  // Services columns: 0=name, 1=start(min from KO), 2=stop(min from FW), 3=available(min from KO), 4=notes
   // Feeds columns:    0=service, 1=feed_name, 2=tx_start, 3=tx_end, 4=individual(YES), 5=active_from, 6=notes
-  // Subtasks columns: 0=service, 1=feed, 2=subtask_name, 3=start_offset(min from KO), 4=notes
+  // Subtasks columns: 0=service, 1=feed (empty=service milestone), 2=name, 3=offset(min from KO), 4=notes
   let services;
   if(sheetNames.includes('Services')){
     const svcMap={};
     sheetData('Services').forEach((r,i)=>{
       const rawName=str(r[0]);
       if(!rawName) return;
-      svcMap[rawName]={id:slugify(rawName)+'_'+i, name:rawName, feeds:[], start:num(r[1])||0, stop:num(r[2])||0};
+      const s=num(r[1])||0, st=num(r[2])||0;
+      const av=(r[3]!==null&&r[3]!==undefined&&r[3]!=='')?num(r[3]):s;
+      svcMap[rawName]={id:slugify(rawName)+'_'+i, name:rawName, feeds:[], milestones:[], start:s, stop:st, available:av!=null?av:s};
     });
     if(sheetNames.includes('Feeds')){
       sheetData('Feeds').forEach(r=>{
@@ -1988,10 +2160,14 @@ function parseWorkbook(wb){
       sheetData('Subtasks').forEach(r=>{
         const svcName=str(r[0]), feedName=str(r[1]), stName=str(r[2]);
         const offset=num(r[3]);
-        if(!svcName||!feedName||!stName||offset===null) return;
+        if(!svcName||!stName||offset===null) return;
         const svc=svcMap[svcName]; if(!svc) return;
-        const feed=svc.feeds.find(f=>f.name===feedName); if(!feed) return;
-        feed.subtasks.push({name:stName,offset});
+        if(!feedName){
+          svc.milestones.push({name:stName,offset});
+        } else {
+          const feed=svc.feeds.find(f=>f.name===feedName); if(!feed) return;
+          feed.subtasks.push({name:stName,offset});
+        }
       });
     }
     services=Object.values(svcMap).filter(s=>s.feeds.length>0);
@@ -2017,39 +2193,39 @@ function parseWorkbook(wb){
     if(typeof v==='string'&&/^\d+$/.test(String(v).trim())){dataStart=i;break;}
   }
 
-  // Column positions (user guarantees this order):
-  // 0:M#  1:MD#  2:Date  3:Channel  4:TeamA(tri)  5:TeamB(tri)
-  // 6:Full Name A  7:Full Name B  8:City  9:IBC KO
-  // 10:Dur  11:Train A  12:PC A  13:Train B  14:PC B
+  // Column positions:
+  // 0:M#  1:MD#  2:Date  3:LocalTime  4:UTC  5:IBC KO  6:Eastern  7:London
+  // 8:TimeZone  9:Channel  10:Full Name A  11:Trigramm A  12:Full Name B  13:Trigramm B
+  // 14:Teams  15:City  16:Train A  17:PC A  18:Train B  19:PC B
   const parsedMatches=[];
   for(let i=dataStart;i<rawRows.length;i++){
     const r=rawRows[i];
     if(!r||r.every(v=>v===null||v==='')) continue;
     const isoDate=ddmmyyyyToISO(r[2]);
     if(!isoDate) continue;
-    const koIBC=hhmmToDecimal(r[9]);
+    const koIBC=hhmmToDecimal(r[5]);
     if(koIBC===null) continue;
     parsedMatches.push({
       m:         Math.round(num(r[0])||(i-dataStart+1)),
       md:        Math.round(num(r[1])||0),
       date:      isoDate,
       dateLabel: dateLabel(isoDate),
-      ch:        str(r[3])||'Match A',
-      teamA:     str(r[4])||'???',
-      teamB:     str(r[5])||'???',
-      fullA:     str(r[6])||'???',
-      fullB:     str(r[7])||'???',
-      city:      str(r[8])||'',
+      ch:        str(r[9])||'Match A',
+      teamA:     str(r[11])||'???',
+      fullA:     str(r[10])||'???',
+      teamB:     str(r[13])||'???',
+      fullB:     str(r[12])||'???',
+      city:      str(r[15])||'',
       koIBC,
-      dur:       num(r[10])||matchDurMin,
-      trainA:    toIBCTimeStr(r[11]),
-      pcA:       toIBCTimeStr(r[12]),
-      trainB:    toIBCTimeStr(r[13]),
-      pcB:       toIBCTimeStr(r[14]),
+      dur:       matchDurMin,
+      trainA:    toIBCTimeStr(r[16]),
+      pcA:       toIBCTimeStr(r[17]),
+      trainB:    toIBCTimeStr(r[18]),
+      pcB:       toIBCTimeStr(r[19]),
     });
   }
 
-  if(!parsedMatches.length) return {error:'No valid match rows parsed'};
+  if(!parsedMatches.length && requireMatches) return {error:'No valid match rows parsed'};
   return {services, matches:parsedMatches, settings};
 }
 
@@ -2058,9 +2234,12 @@ function parseWorkbook(wb){
 function applyLoadedData(){
   if(!_parsedXlData) return;
   try {
-    localStorage.setItem('fwc26_services',  JSON.stringify(_parsedXlData.services));
-    localStorage.setItem('fwc26_matches',   JSON.stringify(_parsedXlData.matches));
-    localStorage.setItem('fwc26_settings',  JSON.stringify(_parsedXlData.settings||{}));
+    // Config file (optional) takes priority for services/settings; else fall back to match file or demo
+    const services = _parsedConfig ? _parsedConfig.services : (_parsedXlData.services?.length ? _parsedXlData.services : DEMO_SERVICES);
+    const settings = _parsedConfig ? _parsedConfig.settings : (_parsedXlData.settings || {});
+    localStorage.setItem('fwc26_services', JSON.stringify(services));
+    localStorage.setItem('fwc26_matches',  JSON.stringify(_parsedXlData.matches));
+    localStorage.setItem('fwc26_settings', JSON.stringify(settings));
   } catch(e) { console.warn('localStorage save failed:', e); }
   hideXlOverlay();
   window.location.reload();
@@ -2076,14 +2255,11 @@ function useDemoData(){
   // No reload needed — page already loaded with demo data
 }
 
-// ── Show overlay on first load (no cached data) ───────────────────────────────
+// ── Show overlay on first load (no match data cached) ────────────────────────
 (function checkDataOnLoad(){
-  const hasSvc = localStorage.getItem('fwc26_services');
   const hasMat = localStorage.getItem('fwc26_matches');
-  // Show overlay only when no cached data exists
-  if(!hasSvc || !hasMat){
-    showXlOverlay();
-  }
+  const hasCfg = localStorage.getItem('fwc26_services');
+  if(!hasMat && !hasCfg) showXlOverlay();
 })();
 </script>
 </body>
